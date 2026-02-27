@@ -113,6 +113,7 @@
     appargs :: any(), % application arguments
     appeui :: eui(),
     appkey :: seckey(),
+    nwkkey=undefined :: 'undefined' | seckey(),
     desc :: 'undefined' | string(),
     last_joins :: [{calendar:datetime(), binary()}],
     node :: devaddr()}).
@@ -125,6 +126,9 @@
     appargs :: any(), % application arguments
     nwkskey :: seckey(),
     appskey :: seckey(),
+    fnwksintkey=undefined :: 'undefined' | seckey(),
+    snwksintkey=undefined :: 'undefined' | seckey(),
+    nwksenckey=undefined :: 'undefined' | seckey(),
     desc :: 'undefined' | string(),
     location :: 'undefined' | string(),
     fcntup :: 'undefined' | integer(), % last uplink fcnt

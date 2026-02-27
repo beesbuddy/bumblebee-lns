@@ -1,0 +1,19 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "rebar3 compile",
+      "type": "shell",
+      "command": "rebar3 compile",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "rebar3 escriptize",
+      "type": "shell",
+      "command": "rebar3 escriptize",
+      "group": "build",
+      "problemMatcher": []
+    }
+  ]
+}

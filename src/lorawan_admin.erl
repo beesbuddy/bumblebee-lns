@@ -179,6 +179,7 @@ parse_field(_Key, Value) when Value == null; Value == undefined ->
 parse_field(Key, Value) when Key == mac; Key == netid; Key == mask;
                         Key == deveui; Key == appeui; Key == appkey; Key == node;
                         Key == devaddr; Key == nwkskey; Key == appskey;
+                        Key == nwkkey; Key == fnwksintkey; Key == snwksintkey; Key == nwksenckey;
                         Key == data; Key == frid; Key == evid; Key == eid ->
     lorawan_utils:hex_to_binary(Value);
 parse_field(Key, Value) when Key == sname; Key == severity; Key == entity ->
@@ -262,6 +263,7 @@ build_field(_Key, undefined) ->
 build_field(Key, Value) when Key == mac; Key == netid; Key == mask;
                         Key == deveui; Key == appeui; Key == appkey; Key == node;
                         Key == devaddr; Key == nwkskey; Key == appskey;
+                        Key == nwkkey; Key == fnwksintkey; Key == snwksintkey; Key == nwksenckey;
                         Key == data; Key == frid; Key == evid; Key == eid ->
     lorawan_utils:binary_to_hex(Value);
 build_field(Key, Value) when Key == sname; Key == severity; Key == entity ->

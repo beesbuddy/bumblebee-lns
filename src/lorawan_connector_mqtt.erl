@@ -27,7 +27,7 @@ start_link(Connector) ->
 init([#connector{connid=Id, app=App, uri=Uri, client_id=ClientId, name=UserName, pass=Password,
         subscribe=Sub, publish_uplinks=PubUp, publish_events=PubEv, received=Cons}=Connector]) ->
     process_flag(trap_exit, true),
-    ok = pg2:join({backend, App}, self()),
+    ok = lorawan_compat:pg_join({backend, App}, self()),
     self() ! nodes_changed,
     timer:send_interval(60*1000, ping),
     try
@@ -140,7 +140,7 @@ connect(Vers, Arguments, Conn) ->
 
 connection_args([Uri, ClientId, UserName, Password], Conn) ->
     lager:debug("Connecting ~s to ~p, id ~p, user ~p", [Conn#connector.connid, Uri, ClientId, UserName]),
-    {ok, ConnUri} = http_uri:parse(binary_to_list(Uri), [{scheme_defaults, [{mqtt, 1883}, {mqtts, 8883}]}]),
+    {ok, ConnUri} = lorawan_compat:parse_uri(Uri, [{mqtt, 1883}, {mqtts, 8883}]),
     {Scheme, _UserInfo, HostName, Port, _Path, _Query} = ConnUri,
     lists:append([
         [{host, HostName},

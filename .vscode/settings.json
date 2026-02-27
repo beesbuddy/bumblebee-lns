@@ -1,0 +1,14 @@
+{
+  // Erlang LS (erlang-ls) settings.
+  // If erlang_ls is on PATH, this usually works out-of-the-box.
+  // "erlang_ls.serverPath": "erlang_ls",
+
+  // Optional: make sure VS Code uses the same rebar3/OTP as your shell.
+  // "erlang.erlangPath": "erl",
+
+  // Useful for large projects:
+  "files.watcherExclude": {
+    "**/_build/**": true,
+    "**/.rebar3/**": true
+  }
+}

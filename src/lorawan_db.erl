@@ -206,6 +206,10 @@ ensure_fields(Name, TabDef) ->
             ok;
         true ->
             lager:info("Database fields update ~w: ~w to ~w", [Name, OldAttrs, NewAttrs]),
+            UpgradedRows = mnesia:table_info(Name, size),
+            AddedFields = lists:subtract(NewAttrs, OldAttrs),
+            RemovedFields = lists:subtract(OldAttrs, NewAttrs),
+            log_migration_report(Name, AddedFields, RemovedFields, UpgradedRows),
             {atomic, ok} = mnesia:transform_table(Name,
                 fun(OldRec) ->
                     [Rec|Values] = tuple_to_list(OldRec),
@@ -213,8 +217,14 @@ ensure_fields(Name, TabDef) ->
                     list_to_tuple([Rec|[get_value(Rec, X, PropList) || X <- NewAttrs]])
                 end,
                 NewAttrs),
+            lager:info("Database migration applied on ~w: upgraded ~B rows", [Name, UpgradedRows]),
             ok
     end.
+
+log_migration_report(Name, AddedFields, RemovedFields, UpgradedRows) ->
+    lager:info(
+        "Database migration report table=~w upgraded_rows=~B added_fields=~w removed_fields=~w",
+        [Name, UpgradedRows, AddedFields, RemovedFields]).
 
 get_value(_Rec, node, PropList) ->
     % import data from old structure
@@ -229,6 +239,14 @@ get_value(user, pass_ha1, PropList) ->
             lorawan_http_digest:ha1({proplists:get_value(name, PropList),
                 ?REALM, proplists:get_value(pass, PropList)})
     end;
+get_value(device, nwkkey, PropList) ->
+    get_value0(appkey, nwkkey, PropList);
+get_value(node, fnwksintkey, PropList) ->
+    get_value0(nwkskey, fnwksintkey, PropList);
+get_value(node, snwksintkey, PropList) ->
+    get_value0(nwkskey, snwksintkey, PropList);
+get_value(node, nwksenckey, PropList) ->
+    get_value0(nwkskey, nwksenckey, PropList);
 get_value(connector, publish_uplinks, PropList) ->
     get_value0(published, publish_uplinks, PropList);
 get_value(connector, received, PropList) ->

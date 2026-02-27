@@ -1,0 +1,24 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "run main",
+      "type": "erlang",
+      "request": "launch",
+      "runinterminal": [
+        "rebar3",
+        "shell",
+        "--name",
+        "dapnode@localhost",
+        "--setcookie",
+        "COOKIE",
+        "--eval",
+        "application:ensure_all_started(lorawan_server)."
+      ],
+      "projectnode": "dapnode@localhost",
+      "cookie": "COOKIE",
+      "timeout": 300,
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}

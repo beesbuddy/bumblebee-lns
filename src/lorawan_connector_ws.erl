@@ -116,7 +116,7 @@ validate_key(_Else, _) ->
 
 websocket_init(#state{conn=#connector{connid=Id, app=App}, bindings=Bindings} = State) ->
     lager:debug("WebSocket connector ~p with ~p", [Id, Bindings]),
-    ok = pg2:join({backend, App}, self()),
+    ok = lorawan_compat:pg_join({backend, App}, self()),
     {ok, State}.
 
 websocket_handle({text, Msg}, State) ->

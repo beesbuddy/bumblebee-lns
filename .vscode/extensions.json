@@ -1,0 +1,7 @@
+{
+  "recommendations": [
+    "erlang-ls.erlang-ls",
+    "editorconfig.editorconfig"
+  ],
+  "unwantedRecommendations": []
+}

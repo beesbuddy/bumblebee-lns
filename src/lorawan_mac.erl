@@ -57,7 +57,7 @@ ingest_join_frame(MAC, Msg, AppEUI, DevEUI, DevNonce, MIC) ->
         [D] when D#device.appeui /= undefined, D#device.appeui /= AppEUI ->
             {error, {device, DevEUI}, {bad_appeui, binary_to_hex(AppEUI)}, aggregated};
         [D] ->
-            case crypto:cmac(aes_cbc128, D#device.appkey, Msg, 4) of
+            case lorawan_compat:cmac_n(D#device.appkey, Msg, 4) of
                 MIC ->
                     verify_join(MAC, D, DevNonce);
                 _MIC2 ->
@@ -70,7 +70,7 @@ ingest_data_frame(_MAC, MType, Msg, FOpts, FRMPayload, MIC,
         when MType == 2#010; MType == 2#100 ->
     case accept_node_frame(DevAddr, FCnt) of
         {ok, Fresh, {Network, Profile, Node}} ->
-            case crypto:cmac(aes_cbc128, Node#node.nwkskey,
+            case lorawan_compat:cmac_n(Node#node.nwkskey,
                     <<(b0(MType band 1, DevAddr, Node#node.fcntup, byte_size(Msg)))/binary, Msg/binary>>, 4) of
                 MIC ->
                     ok = lorawan_admin:write(
@@ -381,9 +381,9 @@ handle_accept(Gateways, {Network, Profile, Device}, DevAddr, DevNonce) ->
 
 create_node(Gateways, {#network{netid=NetID}=Network, Profile, #device{deveui=DevEUI, appkey=AppKey}},
         AppNonce, DevAddr, DevNonce) ->
-    NwkSKey = crypto:block_encrypt(aes_ecb, AppKey,
+    NwkSKey = lorawan_compat:block_encrypt_ecb(AppKey,
         padded(16, <<16#01, AppNonce/binary, NetID/binary, DevNonce/binary>>)),
-    AppSKey = crypto:block_encrypt(aes_ecb, AppKey,
+    AppSKey = lorawan_compat:block_encrypt_ecb(AppKey,
         padded(16, <<16#02, AppNonce/binary, NetID/binary, DevNonce/binary>>)),
 
     [Device] = mnesia:read(device, DevEUI, write),
@@ -395,6 +395,7 @@ create_node(Gateways, {#network{netid=NetID}=Network, Profile, #device{deveui=De
         devaddr=DevAddr,
         profile=Device2#device.profile, appargs=Device2#device.appargs,
         nwkskey=NwkSKey, appskey=AppSKey, desc=Device2#device.desc,
+        fnwksintkey=NwkSKey, snwksintkey=NwkSKey, nwksenckey=NwkSKey,
         fcntup=undefined, fcntdown=0, last_reset=calendar:universal_time(),
         gateways=Gateways, adr_flag=0, adr_set=undefined,
         adr_use=initial_adr(Network), adr_failed=[],
@@ -447,10 +448,10 @@ encode_accept(#network{netid=NetID, rx1_delay=RxDelay, cflist=CFList}, #device{a
     MHDR = <<2#001:3, 0:3, 0:2>>,
     MACPayload = <<AppNonce/binary, NetID/binary, (reverse(DevAddr))/binary, 0:1,
         RX1DROffset:3, RX2DataRate:4, RxDelay, (encode_cflist(CFList))/binary>>,
-    MIC = crypto:cmac(aes_cbc128, AppKey, <<MHDR/binary, MACPayload/binary>>, 4),
+    MIC = lorawan_compat:cmac_n(AppKey, <<MHDR/binary, MACPayload/binary>>, 4),
 
     % yes, decrypt; see LoRaWAN specification, Section 6.2.5
-    PHYPayload = crypto:block_decrypt(aes_ecb, AppKey, padded(16, <<MACPayload/binary, MIC/binary>>)),
+    PHYPayload = lorawan_compat:block_decrypt_ecb(AppKey, padded(16, <<MACPayload/binary, MIC/binary>>)),
     {ok, Node, <<MHDR/binary, PHYPayload/binary>>}.
 
 encode_cflist(List) when is_list(List), length(List) > 0, length(List) =< 5 ->
@@ -531,7 +532,7 @@ sign_frame(Confirmed, DevAddr, NwkSKey, FCnt, MACPayload) ->
             true -> 2#101
         end,
     Msg = <<MType:3, 0:3, 0:2, MACPayload/binary>>,
-    MIC = crypto:cmac(aes_cbc128, NwkSKey, <<(b0(1, DevAddr, FCnt, byte_size(Msg)))/binary, Msg/binary>>, 4),
+    MIC = lorawan_compat:cmac_n(NwkSKey, <<(b0(1, DevAddr, FCnt, byte_size(Msg)))/binary, Msg/binary>>, 4),
     <<Msg/binary, MIC/binary>>.
 
 bool_to_pending(true) -> 1;
@@ -543,11 +544,11 @@ cipher(Bin, Key, Dir, DevAddr, FCnt) ->
     cipher(Bin, Key, Dir, DevAddr, FCnt, 1, <<>>).
 
 cipher(<<Block:16/binary, Rest/binary>>, Key, Dir, DevAddr, FCnt, I, Acc) ->
-    Si = crypto:block_encrypt(aes_ecb, Key, ai(Dir, DevAddr, FCnt, I)),
+    Si = lorawan_compat:block_encrypt_ecb(Key, ai(Dir, DevAddr, FCnt, I)),
     cipher(Rest, Key, Dir, DevAddr, FCnt, I+1, <<(binxor(Block, Si, <<>>))/binary, Acc/binary>>);
 cipher(<<>>, _Key, _Dir, _DevAddr, _FCnt, _I, Acc) -> Acc;
 cipher(<<LastBlock/binary>>, Key, Dir, DevAddr, FCnt, I, Acc) ->
-    Si = crypto:block_encrypt(aes_ecb, Key, ai(Dir, DevAddr, FCnt, I)),
+    Si = lorawan_compat:block_encrypt_ecb(Key, ai(Dir, DevAddr, FCnt, I)),
     <<(binxor(LastBlock, binary:part(Si, 0, byte_size(LastBlock)), <<>>))/binary, Acc/binary>>.
 
 ai(Dir, DevAddr, FCnt, I) ->

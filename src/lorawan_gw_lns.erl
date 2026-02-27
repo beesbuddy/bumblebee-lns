@@ -110,7 +110,7 @@ handle_message(#{router:=Router}, #state{mac=undefined}=State) ->
     ID6 = lorawan_eid:as_id6(MAC),
     % determine own address
     [#config{admin_url=Prefix}] = mnesia:dirty_read(config, <<"main">>),
-    {ok, {Scheme, _, Host, Port, Path, _}} = http_uri:parse(Prefix),
+    {ok, {Scheme, _, Host, Port, Path, _}} = lorawan_compat:parse_uri(Prefix, [{http, 80}, {https, 443}]),
     Scheme2 =
         case Scheme of
             http -> <<"ws">>;
