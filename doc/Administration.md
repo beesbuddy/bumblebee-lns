@@ -6,7 +6,7 @@ You can access it via a web browser by entering the URL `http://server:8080`, wh
 `server` is the IP or the hostname of your server.
 
 The port and default credentials (which are set when the server database is created)
-can be changed in the [`sys.config`](../lorawan_server.config). The credentials can
+can be changed in the [`sys.config`](../bumblebee.config). The credentials can
 be then altered via the admin interface.
 
 The server administration can be operated in an isolated network, except (Google)
@@ -19,7 +19,7 @@ not be displayed, but other Web Admin functions and the REST API will work fine.
 The management web-pages are available under `/admin`. It is a wrapper around
 the REST API described below.
 
-![alt tag](https://raw.githubusercontent.com/gotthardp/lorawan-server/master/doc/images/admin-dashboard.png)
+![alt tag](https://raw.githubusercontent.com/gotthardp/bumblebee/master/doc/images/admin-dashboard.png)
 
 The server Dashboard shows:
  * Rolling timeline that displays:
@@ -98,7 +98,7 @@ To enable Prometheus support, add or uncomment the following line in your server
 configuration file (See [Configuration Guidelines](Configuration.md) for details):
 
 ```erlang
-[{lorawan_server, [
+[{bumblebee, [
     ...
     % Set the following parameter to true to export statistics metrics in Prometheus format
     {enable_prometheus, true},
@@ -263,7 +263,7 @@ The server also inserts the HTTP header `X-Total-Count` indicating the total ite
 
 ## Proxy Configuration
 
-When the lorawan-server is installed behind a HTTP proxy you may need to adjust
+When the bumblebee is installed behind a HTTP proxy you may need to adjust
 the proxy configuration as follows.
 
 ### Apache HTTP

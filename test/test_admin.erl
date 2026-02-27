@@ -45,7 +45,7 @@ post_json(Uri, Body) ->
     Realm = proplists:get_value(<<"realm">>, Params),
     Nonce = proplists:get_value(<<"nonce">>, Params),
     Response = lorawan_http_digest:response(<<"POST">>, list_to_binary(Uri), <<>>,
-        {<<"admin">>, <<"lorawan-server">>, <<"admin">>}, Nonce),
+        {<<"admin">>, <<"bumblebee">>, <<"admin">>}, Nonce),
 
     {ok, {{_Version, 200, _ReasonPhrase2}, _Headers2, _Body2}} =
         httpc:request(post, {"http://localhost:8080/api/" ++ Uri,

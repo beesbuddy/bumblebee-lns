@@ -12,7 +12,7 @@ for /D %%A in ("%PROGRAMFILES%\erl*" "%PROGRAMFILES(x86)%\erl*") do (
 if [%1] == [] goto MISSING
 if [%1] == [add] goto ADD
 
-%ERLSRV% %1 "LoRaWAN Server"
+%ERLSRV% %1 "Bumblebee"
 goto END
 
 :ADD
@@ -25,7 +25,7 @@ for /D %%A in ("%ROOT_DIR%\lib\*") do (
     set FILES=!FILES! "%%A\ebin"
 )
 
-%ERLSRV% add "LoRaWAN Server" -w "%ROOT_DIR%" -sname lorawan -ar "+Bd -pa !FILES! -s lorawan_app -config releases\{{release_version}}\sys.config" -c "Handles packets received by LoRaWAN gateways"
+%ERLSRV% add "Bumblebee" -w "%ROOT_DIR%" -sname bumblebee -ar "+Bd -pa !FILES! -s lorawan_app -config releases\{{release_version}}\sys.config" -c "Handles packets received by LoRaWAN gateways"
 goto END
 
 :MISSING

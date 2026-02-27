@@ -161,7 +161,7 @@ myApp.config(['NgAdminConfigurationProvider', function (nga) {
     // ---- servers
     servers.listView().fields([
         nga.field('sname').label('Name').isDetailLink(true),
-        nga.field('modules.lorawan_server').label('Version'),
+        nga.field('modules.bumblebee').label('Version'),
         nga.field('memory').label('Free Memory')
             .map(map_memstats),
         nga.field('disk').label('Free Disk')
@@ -178,7 +178,7 @@ myApp.config(['NgAdminConfigurationProvider', function (nga) {
         // General
         nga.field('sname').label('Name')
             .editable(false),
-        nga.field('modules.lorawan_server').label('Version')
+        nga.field('modules.bumblebee').label('Version')
             .editable(false),
         // Status
         nga.field('health_alerts', 'choices').label('Alerts')
@@ -1143,7 +1143,7 @@ myApp.config(['NgAdminConfigurationProvider', function (nga) {
         .addCollection(nga.collection(servers)
             .fields([
                 nga.field('sname').label('Name').isDetailLink(true),
-                nga.field('modules.lorawan_server').label('Version'),
+                nga.field('modules.bumblebee').label('Version'),
                 nga.field('memory').label('Memory')
                     .map(map_memstats),
                 nga.field('disk').label('Disk')

@@ -20,7 +20,7 @@ start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 init([]) ->
-    Period = application:get_env(lorawan_server, connector_monitor_period,
+    Period = application:get_env(bumblebee, connector_monitor_period,
             ?DEFAULT_PERIOD),
     {ok, #state{period=Period}, Period}.
 

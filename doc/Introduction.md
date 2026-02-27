@@ -1,6 +1,6 @@
 # Server Introduction
 
-This document describes how the lorawan-server handles LoRaWAN communication with
+This document describes how the bumblebee handles LoRaWAN communication with
 active network Nodes.
 
 ## Infrastructure
@@ -24,7 +24,7 @@ The server can handle one or more networks. Each Network configuration covers:
 
 Each LoRaWAN network contains various devices.
 
-![alt tag](https://raw.githubusercontent.com/gotthardp/lorawan-server/master/doc/images/device-relations.png)
+![alt tag](https://raw.githubusercontent.com/gotthardp/bumblebee/master/doc/images/device-relations.png)
 
 ### Profile
 
@@ -59,7 +59,7 @@ Represents devices Activated-By-Personalization (ABP) and Over-the-Air Activated
 Backend servers provide external applications, which receive and process uplink
 frames and (optionally) send downlink frames.
 
-![alt tag](https://raw.githubusercontent.com/gotthardp/lorawan-server/master/doc/images/backend-relations.png)
+![alt tag](https://raw.githubusercontent.com/gotthardp/bumblebee/master/doc/images/backend-relations.png)
 
 ### Handlers
 

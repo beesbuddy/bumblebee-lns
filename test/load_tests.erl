@@ -23,7 +23,7 @@
 load_test_() ->
     {setup,
         fun() ->
-            {ok, _} = application:ensure_all_started(lorawan_server),
+            {ok, _} = application:ensure_all_started(bumblebee),
             lager:set_loglevel(lager_console_backend, debug),
             test_admin:add_area(?AREA),
             Gateways =
@@ -64,7 +64,7 @@ load_test_() ->
                     test_mote:stop(Node)
                 end,
                 Nodes),
-            application:stop(lorawan_server),
+            application:stop(bumblebee),
             application:stop(mnesia)
         end,
         fun load_test/1}.

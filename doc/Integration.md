@@ -32,11 +32,11 @@ First, follow the AWS IoT guidelines to configure your IoT device:
    ```
  * Create a device and link it to the same certificate.
 
-Then, open the lorawan-server web-administration and create an Backend Connector:
+Then, open the bumblebee web-administration and create an Backend Connector:
  - **URI** is the AWS *Endpoint* with the `mqtts://` prefix
  - **Publish Uplinks** is a pattern for the publication topic, e.g. `out/{devaddr}`.
    Make sure you added `devaddr` to your [Handler](Handlers.md) Fields.
- - **Subscribe** is a topic to be subscribed by the lorawan-server, e.g. `in/#`.
+ - **Subscribe** is a topic to be subscribed by the bumblebee, e.g. `in/#`.
  - **Received Topic** is a template for parsing the topic of received messages, e.g. `in/{devaddr}`.
 
 On the Authentication tab:
@@ -52,25 +52,25 @@ you can alternatively create a Thing Security Certificate. In such case the
 
 ## IBM Watson IoT Platform
 [IBM Watson IoT Platform](https://www.ibm.com/cloud-computing/bluemix/internet-of-things)
-can be integrated via MQTT. The lorawan-server can act as a Gateway acting on
+can be integrated via MQTT. The bumblebee can act as a Gateway acting on
 behalf of multiple devices.
 
 First, follow the IBM Bluemix documentation to configure the IoT Gateway:
  * Create a *device type* for your devices, e.g. "loramote"
- * Create a *gateway type* for the lorawan-server, e.g. "loraserver"
+ * Create a *gateway type* for the bumblebee, e.g. "loraserver"
  * Create one gateway of the *gateway type* you just created using an arbitrary
    *Device ID*. After you click *Add* **don't close** the web-page displaying the
    auto-generated *Authentication Token*.
  * Do not create any devices; these will be created automatically once they send
    some data.
 
-Then, open the lorawan-server web-administration and create an Backend Connector:
+Then, open the bumblebee web-administration and create an Backend Connector:
  - **URI** shall be `mqtt://orgid.messaging.internetofthings.ibmcloud.com`, where
    orgid is your *Organization ID* displayed on the web-page you didn't close.
  - **Publish Uplinks** is a pattern for the publication topic,
    e.g. `iot-2/type/loramote/id/{deveui}/evt/status/fmt/json`, where loramote is
    the *device type* you created.
- - **Subscribe** is a topic to be subscribed by the lorawan-server,
+ - **Subscribe** is a topic to be subscribed by the bumblebee,
    e.g. `iot-2/type/loramote/id/+/cmd/+/fmt/+`.
  - **Received Topic** is a template for parsing the topic of received messages,
    e.g. `iot-2/type/loramote/id/{deveui}/cmd/status/fmt/json`.
@@ -95,7 +95,7 @@ First, follow the ThingSpeak guidelines and create a New Channel:
  * Define one or more *Field* labels;
  * Once you *Save Channel*, display the *Write API Key*.
 
-Open the lorawan-server web-administration and create an Backend Connector:
+Open the bumblebee web-administration and create an Backend Connector:
  - **URI** shall be either `mqtt://mqtt.thingspeak.com` or `mqtts://mqtt.thingspeak.com`
  - **Publish Uplinks** shall be `channels/<channelID>/publish/<apikey>`, where
    * `<channelID>` is the numeric *Channel ID*
@@ -132,7 +132,7 @@ First, follow the Azure IoT Hub guidelines to configure your IoT devices:
  * Instead creating the access policy you may copy-paste the auto-generated device
    *Primary key* (encoded using Base64) to *App Arguments* in the Node config.
 
-Then, open the lorawan-server web-administration and create an Backend Connector:
+Then, open the bumblebee web-administration and create an Backend Connector:
  - **URI** is the IoT Hub *Hostname* with the `mqtts://` prefix
  - **Publish Uplinks** shall be `devices/{devaddr}/messages/events/`.
    The trailing slash is mandatory.
@@ -162,7 +162,7 @@ First, follow the ThingsBoard documentation to configure your devices
  * When created, enter the *Manage Credentials* tab and copy-paste *Access token*
    to *App Arguments* in the Node config.
 
-Then, open the lorawan-server web-administration and create an Backend Connector:
+Then, open the bumblebee web-administration and create an Backend Connector:
  - **URI** shall be `mqtt://demo.thingsboard.io` or URL of your local ThingsBoard.
  - **Publish Uplinks** shall be `v1/devices/me/telemetry`.
  - **Publish Events** can be left empty, or set to `v1/devices/me/attributes`.
@@ -188,7 +188,7 @@ the integration, make sure you consult the following Adafruit articles:
  * [MQTT, AdafruitIO & You!](https://learn.adafruit.com/mqtt-adafruit-io-and-you)
 
 Once your Adafruit account, dashboards and feeds are set up, go to the
-lorawan-server web-administration and create a Backends->Connector:
+bumblebee web-administration and create a Backends->Connector:
  - **URI** - `mqtt://io.adafruit.com` or `mqtts://io.adafruit.com`.
  - **Publish Uplinks** - Name of the topic you will be publishing to in the form
    `YourUserName/feeds/YourFeed`.

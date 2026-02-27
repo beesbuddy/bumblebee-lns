@@ -6,7 +6,7 @@ resources (CPU and memory).
 ## Raspberry Pi
 
 When using Raspbian you can use the standard `.deb` package available for every
-[release](https://github.com/gotthardp/lorawan-server/releases).
+[release](https://github.com/gotthardp/bumblebee/releases).
 
 
 ## Multitech mLinux
@@ -62,12 +62,12 @@ Make sure your LoRa card was correctly detected by
 mts-io-sysfs show lora/hw-version
 ```
 
-Set `ENABLED="yes"` in `/etc/default/lorawan-server`.
+Set `ENABLED="yes"` in `/etc/default/bumblebee`.
 
-Edit server configuration in `/usr/lib/lorawan-server/releases/<version>/sys.config`
+Edit server configuration in `/usr/lib/bumblebee/releases/<version>/sys.config`
 and set `{disksup_posix_only, true}` since mLinux uses stripped-down Unix tools.
 
 
 ## OpenWRT
 
-See the [MatchX blog](https://matchx.io/community/box/5-lorawan-server-running-on-the-box).
+See the [MatchX blog](https://matchx.io/community/box/5-bumblebee-running-on-the-box).

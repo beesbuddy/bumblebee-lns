@@ -10,13 +10,13 @@
 -export([start/2, stop/1]).
 
 start() ->
-    {ok, _Started} = application:ensure_all_started(lorawan_server).
+    {ok, _Started} = application:ensure_all_started(bumblebee).
 
 start(_Type, _Args) ->
     ok = ensure_erlang_version(21),
-    lager:debug("Using config: ~p", [application:get_all_env(lorawan_server)]),
+    lager:debug("Using config: ~p", [application:get_all_env(bumblebee)]),
     lorawan_db:ensure_tables(),
-    case {application:get_env(lorawan_server, http_admin_listen, []), retrieve_valid_ssl()} of
+    case {application:get_env(bumblebee, http_admin_listen, []), retrieve_valid_ssl()} of
         {[], []} ->
             lager:warning("Web-admin does not listen on any port"),
             ok;
@@ -27,7 +27,7 @@ start(_Type, _Args) ->
         {HttpOpts, SslOpts} ->
             start_https(SslOpts, normal_dispatch()),
             start_http(HttpOpts,
-                case application:get_env(lorawan_server, http_admin_redirect_ssl, true) of
+                case application:get_env(bumblebee, http_admin_redirect_ssl, true) of
                     false ->
                         normal_dispatch();
                     true ->
@@ -37,7 +37,7 @@ start(_Type, _Args) ->
     lorawan_sup:start_link().
 
 retrieve_valid_ssl() ->
-    case application:get_env(lorawan_server, http_admin_listen_ssl, []) of
+    case application:get_env(bumblebee, http_admin_listen_ssl, []) of
         [] ->
             [];
         Config ->

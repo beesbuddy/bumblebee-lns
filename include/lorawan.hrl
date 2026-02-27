@@ -25,7 +25,7 @@
             lists:zip3(record_info(fields, Record), lorawan_db:record_fields(RecData), tl(tuple_to_list(#Record{})))
     ))).
 
--define(REALM, <<"lorawan-server">>).
+-define(REALM, <<"bumblebee">>).
 
 -record(config, {
     name :: nonempty_string(),

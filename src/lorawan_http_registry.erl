@@ -75,7 +75,7 @@ update_routes(State) ->
             cowboy:set_env(https, dispatch, Dispatch);
         {true, true} ->
             cowboy:set_env(https, dispatch, Dispatch),
-            case application:get_env(lorawan_server, http_admin_redirect_ssl, true) of
+            case application:get_env(bumblebee, http_admin_redirect_ssl, true) of
                 false ->
                     cowboy:set_env(http, dispatch, Dispatch);
                 true ->
@@ -174,7 +174,7 @@ get_static(routes) ->
     {"/api/upload", lorawan_admin_upload,
         {[], [{<<"backend:write">>, '*'}]}},
     {"/admin", lorawan_admin_static,
-        {priv_file, lorawan_server, <<"admin/index.html">>,
+        {priv_file, bumblebee, <<"admin/index.html">>,
             [{<<"web-admin">>, '*'}]}},
     {"/admin/timeline", lorawan_admin_timeline,
         [{<<"web-admin">>, '*'}]},
@@ -193,14 +193,14 @@ get_static(routes) ->
     {"/admin/ngraph/:devaddr", lorawan_admin_graph_node,
         [{<<"device:read">>, '*'}]},
     {"/admin/[...]", lorawan_admin_static,
-        {priv_dir, lorawan_server, <<"admin">>,
+        {priv_dir, bumblebee, <<"admin">>,
             [{<<"web-admin">>, '*'}]}}].
 
 get_custom(scopes) ->
     [];
 get_custom(routes) ->
     % serve custom web-pages
-    custom_web(application:get_env(lorawan_server, http_custom_web, [])).
+    custom_web(application:get_env(bumblebee, http_custom_web, [])).
 
 custom_web([{URL, dir, Path, Scope} | Dirs]) ->
     [{URL, lorawan_admin_static,
@@ -211,10 +211,10 @@ custom_web([{URL, file, Path, Scope} | Dirs]) ->
         {file, Path, Scope}}
     | custom_web(Dirs)];
 custom_web([]) ->
-    AdminPath = application:get_env(lorawan_server, http_admin_path, <<"/admin">>),
+    AdminPath = application:get_env(bumblebee, http_admin_path, <<"/admin">>),
     % default icon
     [{"/favicon.ico", lorawan_admin_static,
-        {priv_file, lorawan_server, <<"favicon.ico">>,
+        {priv_file, bumblebee, <<"favicon.ico">>,
             % anyone, even a REST API may request favicon
             [{'*', '*'}]}},
     % last-chance redirection

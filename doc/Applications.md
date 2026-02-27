@@ -8,10 +8,10 @@ After a fresh installation you will see only one internal application:
  - **semtech-mote** for
    [Semtech/IMST LoRaMote](http://webshop.imst.de/loramote-lora-evaluation-tool.html)
 
-Sample lorawan-server extension, which implements a **microchip-mote** application
+Sample bumblebee extension, which implements a **microchip-mote** application
 for [Microchip LoRa(TM) Technology Mote](http://www.microchip.com/Developmenttools/ProductDetails.aspx?PartNO=dm164138),
 is available at
-https://github.com/gotthardp/lorawan-server-demoapp.
+https://github.com/gotthardp/bumblebee-demoapp.
 
 You may fork this example and create your own internal applications.
 
@@ -24,9 +24,9 @@ Each internal application may implement:
 
 To implement a new application you need to create a `lorawan_application_xxx.erl`
 module implementing the `lorawan_application` behaviour and register it in the
-[`sys.config`](../lorawan_server.config):
+[`sys.config`](../bumblebee.config):
 ```erlang
-{lorawan_server, [
+{bumblebee, [
     {applications, [
         {<<"my-app">>, lorawan_application_xxx},
         ...
@@ -36,7 +36,7 @@ module implementing the `lorawan_application` behaviour and register it in the
 The custom application may be implemented as a standalone Erlang application `app_x`.
 In such case do:
 ```erlang
-{lorawan_server, [
+{bumblebee, [
     {applications, [
         {<<"my-app">>, {app_x, lorawan_application_xxx}},
         ...
@@ -44,17 +44,17 @@ In such case do:
 ```
 
 You may write a new `rebar.config` and create a rebar release bundling together
-your custom `app_x` and the standard lorawan-server release.
+your custom `app_x` and the standard bumblebee release.
 ```erlang
 {erl_opts, [
     {parse_transform, lager_transform}
 ]}.
 {deps, [
-    {lorawan_server, {git, "https://github.com/gotthardp/lorawan-server.git", {branch, "master"}}}
+    {bumblebee, {git, "https://github.com/gotthardp/bumblebee.git", {branch, "master"}}}
 ]}.
 {relx, [
-    {release, {'lorawan-server-appx', "0.1.0"},
-        [lorawan_server, lorawan_appx]},
+    {release, {'bumblebee-appx', "0.1.0"},
+        [bumblebee, lorawan_appx]},
     {sys_config, "lorawan_demoapp.config"}
 ]}.
 ```
@@ -150,7 +150,7 @@ of a confirmed downlink frame:
 
 ## HTTP Server
 
-lorawan-server integrates the Cowboy HTTP server. The applications may use the
+bumblebee integrates the Cowboy HTTP server. The applications may use the
 full potential of this server.
 Please refer to the [Cowboy 2.0 User Guide](https://ninenines.eu/docs/en/cowboy/2.0/guide/),
 or [Cowboy 2.0 Function Reference](https://ninenines.eu/docs/en/cowboy/2.0/manual/)

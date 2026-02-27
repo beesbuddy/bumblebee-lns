@@ -3,8 +3,8 @@
 Overview of recent errors and warnings is provided in the server [Event List](Events.md).
 Details can be found in the server logs.
 
-Depending on your installation the server logs are stored in `/var/log/lorawan-server`,
-`/var/lib/lorawan-server/log` or just `lorawan-server/log`. By default three log
+Depending on your installation the server logs are stored in `/var/log/bumblebee`,
+`/var/lib/bumblebee/log` or just `bumblebee/log`. By default three log
 files are provided: `debug.log`, `error.log` and `crash.log`. The log messages
 contain date and time, severity (debug, info, notice, warning, error), process ID
 and a description.
@@ -19,7 +19,7 @@ is simply a list of bytes in decimal notation.
 For example, `<<1,39,235,255,255,176,23,196>>` means `01-27-EB-FF-FF-B0-17-C4`.
 
 By default no messages are shown on the console. To see the debug messages you need to
-open the server configuration in `lorawan-server/releases/<VERSION>/sys.config`,
+open the server configuration in `bumblebee/releases/<VERSION>/sys.config`,
 uncomment (remove the `%` character) from the `{lager_console_backend, debug}` line
 and restart the server.
 
@@ -46,7 +46,7 @@ This may be because:
  * The device did not listen on the channel (frequency) used by the server. Verify
    your device correctly listens in the right RX1/RX2 window. The RX2 frequencies
    and data rates are provided in the
-   [regions](https://github.com/gotthardp/lorawan-server/blob/master/src/lorawan_server.app.src#L28)
+   [regions](https://github.com/gotthardp/bumblebee/blob/master/src/bumblebee.app.src#L28)
    config parameter.
 
 Some devices like the Arduino LMIC may have problems receiving downlinks in the RX1
@@ -152,7 +152,7 @@ See the **D/L Expires** setting of the corresponding [Handler](Handlers.md).
 
 ### prerequisite_failed
 
-This is reported when the lorawan-server is started with older Erlang/OTP. At
+This is reported when the bumblebee is started with older Erlang/OTP. At
 least 21.0 (or later) is required.
 
 ### connector_disabled
@@ -197,7 +197,7 @@ setting `network.http.spdy.enforce-tls-profile` to `false`.
 ### Lost admin password
 
 If you forgot your admin password
- * make sure `/var/lib/lorawan-server/.erlang.cookie` and `$HOME/.erlang.cookie` are identical
+ * make sure `/var/lib/bumblebee/.erlang.cookie` and `$HOME/.erlang.cookie` are identical
  * connect to the cluster via remote shell by `erl -sname test -remsh lorawan@<hostname>`
  * delete the `user` database by `mnesia:delete_table(user).`
  * restart the server to recreate the `user` database with the default admin password

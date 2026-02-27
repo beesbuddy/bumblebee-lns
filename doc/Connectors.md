@@ -198,7 +198,7 @@ curl -v --digest -uadmin:admin -H "Content-Type: application/json" -X POST http:
 
 ## Generic MQTT Servers
 
-The lorawan-server can acts as a MQTT client, publish uplink frames and subscribe
+The bumblebee can acts as a MQTT client, publish uplink frames and subscribe
 for downlink frames. It can connect to any standard MQTT server (message broker),
 e.g. the
 [RabbitMQ](https://www.rabbitmq.com/mqtt.html) or
@@ -209,12 +209,12 @@ First of all, make sure you understand the
 and that the MQTT protocol [is enabled](https://www.rabbitmq.com/mqtt.html)
 in your broker.
 
-Open the lorawan-server web-administration and create a Backend Connector:
+Open the bumblebee web-administration and create a Backend Connector:
  - **URI** defines the target host either as `mqtt://host:port` or `mqtts://host:port`
  - **Publish QoS** and **Subscribe QoS** directly determine the QoS level.
  - **Publish Uplinks** is a pattern for constructing the message topic
    of uplinks, e.g. `out/{devaddr}`.
- - **Subscribe** is a downlink topic to be subscribed by the lorawan-server,
+ - **Subscribe** is a downlink topic to be subscribed by the bumblebee,
    e.g. `in/#`.
  - **Received Topic** is a template for parsing the topic of received downlink
    messages, e.g. `in/{devaddr}`.
@@ -247,10 +247,10 @@ mosquitto_pub -h 127.0.0.1 -p 1883 -t 'in/00112233' -m '{"data":"00"}' -u 'user'
 
 ## MongoDB
 
-The lorawan-server can store the received uplinks directly to a
+The bumblebee can store the received uplinks directly to a
 [MongoDB](https://www.mongodb.com).
 
-Open the lorawan-server web-administration and create a Backend Connector:
+Open the bumblebee web-administration and create a Backend Connector:
  - **Format** is ignored, but should be set to *JSON*.
  - **URI** defines the target host `mongodb://host:port` or `mongodb://host1:port,host2:port`
    to list replica pairs/sets.

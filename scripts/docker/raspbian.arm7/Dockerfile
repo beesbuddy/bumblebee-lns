@@ -1,6 +1,6 @@
-# docker build -t gotthardp/lorawan-server .
+# docker build -t gotthardp/bumblebee .
 # docker run --restart unless-stopped --detach --name lorawan --hostname lorawan \
-#   --volume /root/storage:/storage --publish 8081:8080/tcp --publish 1680:1680/udp gotthardp/lorawan-server
+#   --volume /root/storage:/storage --publish 8081:8080/tcp --publish 1680:1680/udp gotthardp/bumblebee
 FROM tedsluis/raspbian.minimal.arm7
 RUN apt-get update && apt-get install -y wget git npm make
 
@@ -12,10 +12,10 @@ RUN  cd otp_src_20.0/ && ./configure && make && make install
 
 RUN rm otp_src_20.0.tar.gz
 RUN rm -R otp_src_20.0/
-RUN mkdir lorawan-server
-RUN wget https://github.com/gotthardp/lorawan-server/releases/download/v0.4.12/lorawan-server-0.4.12.tar.gz
-RUN mv lorawan-server-0.4.12.tar.gz lorawan-server/
-RUN cd lorawan-server && tar -zxvf lorawan-server-0.4.12.tar.gz
+RUN mkdir bumblebee
+RUN wget https://github.com/gotthardp/bumblebee/releases/download/v0.4.12/bumblebee-0.4.12.tar.gz
+RUN mv bumblebee-0.4.12.tar.gz bumblebee/
+RUN cd bumblebee && tar -zxvf bumblebee-0.4.12.tar.gz
 
 # volume for the mnesia database and logs
 RUN mkdir -p /storage
@@ -25,5 +25,5 @@ EXPOSE 1680/udp
 # admin interface
 EXPOSE 8080/tcp
 ENV LORAWAN_HOME=/storage
-WORKDIR /lorawan-server
-CMD bin/lorawan-server
+WORKDIR /bumblebee
+CMD bin/bumblebee

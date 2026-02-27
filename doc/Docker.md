@@ -1,13 +1,13 @@
 # Deployment using Docker
 
-The lorawan-server image is available on
-[Docker Cloud](https://cloud.docker.com/app/gotthardp/repository/docker/gotthardp/lorawan-server/general).
+The bumblebee image is available on
+[Docker Cloud](https://cloud.docker.com/app/gotthardp/repository/docker/gotthardp/bumblebee/general).
 Two tags are available: `stable` and `latest`.
 
 You can run a tag (e.g. `latest`) by:
 
 ```bash
-docker pull gotthardp/lorawan-server:latest
+docker pull gotthardp/bumblebee:latest
 
 docker run --detach \
   --name lorawan \
@@ -17,7 +17,7 @@ docker run --detach \
   --publish 8080:8080/tcp \
   --publish 8443:8443/tcp \
   --publish 1680:1680/udp \
-  gotthardp/lorawan-server:latest
+  gotthardp/bumblebee:latest
 ```
 
 The `/path/to/local` shall point to a local directory, where the Mnesia database

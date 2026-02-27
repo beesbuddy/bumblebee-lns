@@ -1,0 +1,14 @@
+[Unit]
+Description=Bumblebee
+After=network.target
+
+[Service]
+Type=simple
+Environment=LORAWAN_HOME=/var/lib/bumblebee
+Environment=LORAWAN_LOG_ROOT=/var/log/bumblebee
+ExecStart=/usr/lib/bumblebee/bin/bumblebee
+ExecStop=/usr/lib/bumblebee/bin/lorawanctl stop
+User=lorawan
+
+[Install]
+WantedBy=multi-user.target

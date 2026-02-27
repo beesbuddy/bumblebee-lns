@@ -20,7 +20,7 @@
 loramote_test_() ->
     {setup,
         fun() ->
-            {ok, _} = application:ensure_all_started(lorawan_server),
+            {ok, _} = application:ensure_all_started(bumblebee),
             lager:set_loglevel(lager_console_backend, debug),
             test_admin:add_area(?AREA),
             test_admin:add_gateway(?AREA, ?GWMAC),
@@ -36,7 +36,7 @@ loramote_test_() ->
         fun(#state{gateway=Gateway, node1=Node1}) ->
             test_forwarder:stop(Gateway),
             test_mote:stop(Node1),
-            application:stop(lorawan_server),
+            application:stop(bumblebee),
             application:stop(mnesia)
         end,
         fun loramote_test/1}.

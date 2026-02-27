@@ -1,11 +1,11 @@
 ################################################################################
 #
-# lorawan-server
+# bumblebee
 #
 ################################################################################
 
 LORAWAN_SERVER_VERSION = v0.7.0
-LORAWAN_SERVER_SITE = $(call github,gotthardp,lorawan-server,$(LORAWAN_SERVER_VERSION))
+LORAWAN_SERVER_SITE = $(call github,gotthardp,bumblebee,$(LORAWAN_SERVER_VERSION))
 LORAWAN_SERVER_LICENSE = MIT
 LORAWAN_SERVER_LICENSE_FILES = LICENSE
 LORAWAN_SERVER_INSTALL_STAGING = YES

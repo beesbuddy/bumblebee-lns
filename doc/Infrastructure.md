@@ -14,7 +14,7 @@ For each Area you can set:
 
 
 ## Gateways
-![alt tag](https://raw.githubusercontent.com/gotthardp/lorawan-server/master/doc/images/admin-gateway.png)
+![alt tag](https://raw.githubusercontent.com/gotthardp/bumblebee/master/doc/images/admin-gateway.png)
 
 The server can be connected to one or more LoRaWAN gateways. All gateways act
 as one distributed antenna, common to all Networks:

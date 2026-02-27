@@ -41,7 +41,7 @@ content_types_provided(Req, State) ->
     ], Req, State}.
 
 handle_get(Req, #state{name=undefined}=State) ->
-    {ok, Modules} = application:get_env(lorawan_server, applications),
+    {ok, Modules} = application:get_env(bumblebee, applications),
     A = lists:map(
             fun({Name, _Module}) -> [{name, Name}] end,
             Modules),
@@ -55,7 +55,7 @@ handle_get(Req, #state{name=Name}=State) ->
 resource_exists(Req, #state{name=undefined}=State) ->
     {true, Req, State};
 resource_exists(Req, #state{name=Name}=State) ->
-    {ok, Modules} = application:get_env(lorawan_server, applications),
+    {ok, Modules} = application:get_env(bumblebee, applications),
     case proplists:is_defined(Name, Modules) of
         true ->
             {true, Req, State};

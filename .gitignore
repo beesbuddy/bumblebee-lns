@@ -1,4 +1,8 @@
 Mnesia.*
+Mnesia*/
+mnesia*/
+**/Mnesia*/
+**/mnesia*/
 erl_crash.dump
 
 .idea/
@@ -13,6 +17,8 @@ package-lock.json
 scripts/dpkg-deb/control
 scripts/dpkg-deb/conffiles
 node_modules/
+node_module/
+node_m,odule/
 priv/admin/jquery.min.js
 priv/admin/angular-simple-logger.min.js
 priv/admin/ng-google-chart.min.js

@@ -1,5 +1,5 @@
 config BR2_PACKAGE_LORAWAN_SERVER
-	bool "lorawan-server"
+	bool "bumblebee"
 	select BR2_PACKAGE_ERLANG
 	help
 	  Open-source LoRaWAN Server that integrates both the

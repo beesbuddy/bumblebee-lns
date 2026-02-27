@@ -2,9 +2,9 @@
 
 ## Software Architecture
 
-The following figure shows a process hierarchy of the lorawan-server:
+The following figure shows a process hierarchy of the bumblebee:
 
-![alt tag](https://raw.githubusercontent.com/gotthardp/lorawan-server/master/doc/images/software-architecture.png)
+![alt tag](https://raw.githubusercontent.com/gotthardp/bumblebee/master/doc/images/software-architecture.png)
 
 The LoRaWAN communication is handled by the following modules:
  - **lorawan_gw_forwarder** implements the
@@ -48,16 +48,16 @@ lager:warning("unexpected value: ~w", [Value])
 
 ### Connections to the lorawan node
 
-The lorawan-server is started as a cluster node `lorawan@<hostname>`, where
+The bumblebee is started as a cluster node `lorawan@<hostname>`, where
 `<hostname>` is a short hostname of the machine hosting the server. For example,
 if `hostname --short` returns `debian`, the server runs as a node `lorawan@debian`.
 
-You can connect to a running lorawan-server by `erl -sname test -remsh lorawan@<hostname>`.
+You can connect to a running bumblebee by `erl -sname test -remsh lorawan@<hostname>`.
 Once connected you can e.g. use the [Mnesia functions](http://erlang.org/doc/man/mnesia.html)
 to directly access the server database.
 
 Advanced users can also start the [Observer](http://erlang.org/doc/apps/observer/observer_ug.html)
-and trace the lorawan-server processes and activities:
+and trace the bumblebee processes and activities:
 
 ```bash
 erl -smp -sname observer -hidden -setcookie MyCookie -run observer
@@ -72,7 +72,7 @@ enter the cookie explicitly by the `-setcookie MyCookie` parameter.
 
 To create a new release:
 
-* update the version number in `rebar.config`, `src/lorawan_server.app.src` and `scripts/buildroot/lorawan-server.mk`
+* update the version number in `rebar.config`, `src/bumblebee.app.src` and `scripts/buildroot/bumblebee.mk`
 * commit and push the change
 * create a new signed tag, e.g.
 

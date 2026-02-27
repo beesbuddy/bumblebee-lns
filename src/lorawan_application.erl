@@ -29,7 +29,7 @@
     ok.
 
 init() ->
-    Modules = application:get_env(lorawan_server, applications, []),
+    Modules = application:get_env(bumblebee, applications, []),
     do_init(Modules, []).
 
 do_init([], Acc) ->

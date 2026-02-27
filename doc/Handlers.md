@@ -19,7 +19,7 @@ In addition to uplink frames the backend can receive device related events:
 
 
 ## Administration
-![alt tag](https://raw.githubusercontent.com/gotthardp/lorawan-server/master/doc/images/admin-handler.png)
+![alt tag](https://raw.githubusercontent.com/gotthardp/bumblebee/master/doc/images/admin-handler.png)
 
 To create a new handler you need to set:
  - **Application** name

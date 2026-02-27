@@ -37,11 +37,11 @@ release: $(REBAR3)
 dist: $(REBAR3)
 	@$(REBAR3) tar
 
-BUILD_DIR = _build/default/rel/lorawan-server
+BUILD_DIR = _build/default/rel/bumblebee
 
 install:
-	install -d $(DESTDIR)/usr/lib/lorawan-server
-	cp -r $(BUILD_DIR)/bin $(BUILD_DIR)/lib $(BUILD_DIR)/releases $(DESTDIR)/usr/lib/lorawan-server
+	install -d $(DESTDIR)/usr/lib/bumblebee
+	cp -r $(BUILD_DIR)/bin $(BUILD_DIR)/lib $(BUILD_DIR)/releases $(DESTDIR)/usr/lib/bumblebee
 
 dpkg:
 	./scripts/dpkg-deb/build-deb

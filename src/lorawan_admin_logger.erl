@@ -53,7 +53,7 @@ handle_response(Else, _Path, _User, _Peer) ->
     Else.
 
 add_extra_headers(Headers) ->
-    {ok, Extra} = application:get_env(lorawan_server, http_extra_headers),
+    {ok, Extra} = application:get_env(bumblebee, http_extra_headers),
     maps:merge(Extra, Headers).
 
 log_error(Status, _Path, _User, _Peer) when Status == 301; Status == 304; Status == 401 ->

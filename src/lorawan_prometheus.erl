@@ -39,7 +39,7 @@ downlink(MAC) ->
 
 %% gen_server Callbacks
 init([]) ->
-    State = case application:get_env(lorawan_server, enable_prometheus, false) of
+    State = case application:get_env(bumblebee, enable_prometheus, false) of
         false ->
             #state{enabled=false};
         true ->

@@ -19,7 +19,7 @@ Monitoring servers by the load balancer depends on its abilities and can be
 anything from simple ICMP ping test to the HTTP REST querying of the server state,
 see the [Administration Guide](Administration.md) for the details.
 
-![alt tag](https://raw.githubusercontent.com/gotthardp/lorawan-server/master/doc/images/cluster-setup.png)
+![alt tag](https://raw.githubusercontent.com/gotthardp/bumblebee/master/doc/images/cluster-setup.png)
 
 
 ## Configuration
@@ -70,4 +70,4 @@ the server node you want to remove. The click the Delete button and confirm the
 warning. This will terminate the removed node.
 
 If you have any problems, ideas or suggestions, be sure to contact
-[LoRaWAN Server Users](mailto:lorawan-server@googlegroups.com) mailing list.
+[LoRaWAN Server Users](mailto:bumblebee@googlegroups.com) mailing list.

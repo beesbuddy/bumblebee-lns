@@ -1,21 +1,21 @@
 # Server Configuration
 
-This document describes how to configure the lorawan-server.
+This document describes how to configure the bumblebee.
 
-## Static parameters (sys.config and lorawan_server.config)
+## Static parameters (sys.config and bumblebee.config)
 
 Static server configuration is defined in
-`lorawan-server/releases/<VERSION>/sys.config`, which is usually stored under
-`/usr/lib`. It is a single file has multiple sub-sections like `lorawan_server`,
+`bumblebee/releases/<VERSION>/sys.config`, which is usually stored under
+`/usr/lib`. It is a single file has multiple sub-sections like `bumblebee`,
 `lager` or `os_mon.
 
 The `sys.config` is created automatically during the server build (`make release`)
-based on the [lorawan_server.config](/lorawan_server.config). The default values
+based on the [bumblebee.config](/bumblebee.config). The default values
 are defined there.
 
 For example:
 ```erlang
-[{lorawan_server, [
+[{bumblebee, [
     % update this list to add/remove applications
     {applications, [
         {<<"semtech-mote">>, lorawan_application_semtech_mote}]},
@@ -42,7 +42,7 @@ For example:
 Review the `sys.config` and modify where needed. After updating the configuration
 you need to restart the server.
 
-### lorawan_server section
+### bumblebee section
 
 To enable/disable applications, modify the `applications` section. For more
 details see the [Custom Application Guide](Applications.md).
@@ -112,7 +112,7 @@ See [Handlers](Handlers.md) and [Connectors Administration](Connectors.md) for m
 ## Gateway Setup
 
 You need to connect one or more LoRaWAN gateways, who will forward
-received frames to the lorawan_server. It can be any combination of
+received frames to the bumblebee. It can be any combination of
 [packet_forwarder](https://github.com/Lora-net/packet_forwarder)
 or [Basic Station](https://doc.sm.tc/station) based devices.
 
@@ -141,7 +141,7 @@ For example:
 }
 ```
 
-When both packet_forwarder and lorawan-server are running on the same machine
+When both packet_forwarder and bumblebee are running on the same machine
 use `localhost` or `127.0.0.1` as the `server_address`.
 
 This protocol does not support authentication nor encryption, but you can setup

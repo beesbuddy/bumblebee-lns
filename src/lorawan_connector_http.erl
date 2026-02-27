@@ -171,7 +171,7 @@ ensure_gun(#state{conn=#connector{connid=ConnId, uri=Uri}, pid=undefined}=State)
                 {ok, Pid} = gun:open(HostName, Port),
                 {Pid, Path};
             {ok, {https, _UserInfo, HostName, Port, Path, _Query}} ->
-                Opts = application:get_env(lorawan_server, ssl_options, []),
+                Opts = application:get_env(bumblebee, ssl_options, []),
                 {ok, Pid} = gun:open(HostName, Port, #{transport=>ssl, transport_opts=>Opts}),
                 {Pid, Path}
         end,

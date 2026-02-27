@@ -42,7 +42,7 @@ handle_fopts0({Network, Profile, Node0}, Gateways, FOptsIn) ->
         handle_adr(FOptsIn,
         handle_dcycle(FOptsIn, Profile,
         handle_status(FOptsIn, Network, Node0)))),
-    {ok, FramesRequired} = application:get_env(lorawan_server, frames_before_adr),
+    {ok, FramesRequired} = application:get_env(bumblebee, frames_before_adr),
     % maintain quality statistics
     {_, RxQ} = hd(Gateways),
     {LastQs, AverageQs} = append_qs({RxQ#rxq.rssi, RxQ#rxq.lsnr}, Node1#node.last_qs, FramesRequired),
@@ -428,7 +428,7 @@ request_status(_Profile, #node{devstat_time=LastDate, devstat_fcnt=LastFCnt}, FO
         when LastDate == undefined; LastFCnt == undefined ->
     [dev_status_req | FOptsOut];
 request_status(_Profile, #node{devstat=Stats, devstat_time=LastDate, devstat_fcnt=LastFCnt}=Node, FOptsOut) ->
-    {ok, {MaxTime, MaxFCnt}} = application:get_env(lorawan_server, devstat_gap),
+    {ok, {MaxTime, MaxFCnt}} = application:get_env(bumblebee, devstat_gap),
     TimeDiff = calendar:datetime_to_gregorian_seconds(calendar:universal_time())
                 - calendar:datetime_to_gregorian_seconds(LastDate),
     Divider =

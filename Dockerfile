@@ -3,8 +3,8 @@ FROM erlang:21-alpine AS scratch
 MAINTAINER Petr Gotthard <petr.gotthard@centrum.cz>
 
 RUN apk add --no-cache --virtual build-deps git make wget nodejs-npm && \
-    git clone https://github.com/gotthardp/lorawan-server.git && \
-    cd lorawan-server && \
+    git clone https://github.com/gotthardp/bumblebee.git && \
+    cd bumblebee && \
     make release
 
 # Deployment container
@@ -24,8 +24,8 @@ VOLUME /storage
 ENV LORAWAN_HOME=/storage
 
 # Base directory
-WORKDIR /usr/lib/lorawan-server
-CMD bin/lorawan-server
+WORKDIR /usr/lib/bumblebee
+CMD bin/bumblebee
 
 ## Changes with every rebuild
-COPY --from=scratch /lorawan-server/_build/default/rel/ /usr/lib/
+COPY --from=scratch /bumblebee/_build/default/rel/ /usr/lib/

@@ -123,7 +123,7 @@ stop_connector(#connector{}) ->
 find_module(Uri) ->
     case binary:split(Uri, [<<":">>]) of
         [Scheme | _] ->
-            Known = application:get_env(lorawan_server, connectors, []),
+            Known = application:get_env(bumblebee, connectors, []),
             find_module0(Scheme, Known);
         _Else ->
             {error, invalid_uri}

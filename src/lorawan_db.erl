@@ -18,7 +18,7 @@ ensure_tables() ->
         true ->
             ok;
         false ->
-            case application:get_env(lorawan_server, db_master) of
+            case application:get_env(bumblebee, db_master) of
                 undefined ->
                     % this is the very first node starting
                     stopped = mnesia:stop(),
@@ -106,7 +106,8 @@ ensure_tables() ->
         {event, [
             {attributes, record_info(fields, event)},
             {disc_copies, [node()]}]}
-    ]).
+    ]),
+    migrate_admin_realm_hash().
 
 ensure_table(Name, TabDef) ->
     ensure_table(Name, TabDef, []).
@@ -279,7 +280,7 @@ set_defaults(config) ->
     mnesia:dirty_write(#config{name= <<"main">>, items_per_page=30});
 set_defaults(user) ->
     lager:info("Database create default user:password"),
-    {ok, {User, Pass}} = application:get_env(lorawan_server, http_admin_credentials),
+    {ok, {User, Pass}} = application:get_env(bumblebee, http_admin_credentials),
     mnesia:dirty_write(#user{
         name=User,
         pass_ha1=lorawan_http_digest:ha1({User, ?REALM, Pass})});
@@ -287,6 +288,23 @@ set_defaults(server) ->
     mnesia:dirty_write(#server{sname=node(), router_perf=[]});
 set_defaults(_Else) ->
     ok.
+
+migrate_admin_realm_hash() ->
+    LegacyRealm = <<"lorawan-server">>,
+    case application:get_env(bumblebee, http_admin_credentials) of
+        {ok, {User, Pass}} ->
+            LegacyHA1 = lorawan_http_digest:ha1({User, LegacyRealm, Pass}),
+            RealmHA1 = lorawan_http_digest:ha1({User, ?REALM, Pass}),
+            case mnesia:dirty_read(user, User) of
+                [U=#user{pass_ha1=LegacyHA1}] ->
+                    lager:info("Migrating admin digest hash from legacy realm to ~s", [?REALM]),
+                    mnesia:dirty_write(U#user{pass_ha1=RealmHA1});
+                _Else ->
+                    ok
+            end;
+        undefined ->
+            ok
+    end.
 
 foreach_record(Database, Keys, Fun) ->
     lists:foreach(
@@ -378,7 +396,7 @@ leave_cluster(NodeName) ->
     end.
 
 join(NodeName) ->
-    application:stop(lorawan_server),
+    application:stop(bumblebee),
     application:stop(mnesia),
     mnesia:delete_schema([node()]),
     application:start(mnesia),
@@ -388,7 +406,7 @@ join(NodeName) ->
             [ {atomic, ok} = mnesia:add_table_copy(T, node(), disc_copies)
                 || T <- mnesia:system_info(tables)--[schema]],
             ok = mnesia:wait_for_tables(mnesia:system_info(local_tables), 10000),
-            application:start(lorawan_server);
+            application:start(bumblebee);
         {error, Reason} ->
             lager:error("Cluster copy schema: ~p", [Reason]),
             {error, Reason}
@@ -398,7 +416,7 @@ leave([], NodeName) ->
     lager:error("Node ~s is not in cluster", [NodeName]),
     {error, {no_cluster, NodeName}};
 leave([Master|_], NodeName) ->
-    application:stop(lorawan_server),
+    application:stop(bumblebee),
     application:stop(mnesia),
     rpc:call(Master, mnesia, del_table_copy, [schema, NodeName]),
     mnesia:delete_schema([node()]),

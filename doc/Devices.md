@@ -166,7 +166,7 @@ using the over-the-air activation (OTAA) or have been activated-by-personalizati
 (ABP). All devices that can join the network using OTAA are listed on the
 [Devices](Devices.md) list.
 
-![alt tag](https://raw.githubusercontent.com/gotthardp/lorawan-server/master/doc/images/admin-node.png)
+![alt tag](https://raw.githubusercontent.com/gotthardp/bumblebee/master/doc/images/admin-node.png)
 
 For each active network Node you can set:
  - **DevAddr** of the node
@@ -190,7 +190,7 @@ To clone an existing node, simply save it under a different *DevAddr*.
 
 ### ADR
 
-![alt tag](https://raw.githubusercontent.com/gotthardp/lorawan-server/master/doc/images/admin-adr.png)
+![alt tag](https://raw.githubusercontent.com/gotthardp/bumblebee/master/doc/images/admin-adr.png)
 
 Each Node follows the ADR Mode defined in the Device Profile (see above). The
 Node ADR parameters include:
