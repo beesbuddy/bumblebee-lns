@@ -1,5 +1,6 @@
 %
 % Copyright (c) 2016-2019 Petr Gotthard <petr.gotthard@centrum.cz>
+% Copyright (c) 2026 Bumblebee contributors
 % All rights reserved.
 % Distributed under the terms of the MIT License. See the LICENSE file.
 %
@@ -100,19 +101,23 @@ validate_key(deveui, DevEUI) ->
             {error, {unknown_deveui, lorawan_utils:binary_to_hex(DevEUI)}}
     end;
 validate_key(devaddr, DevAddr) ->
+    V = fun(Key) -> 
+        case mnesia:dirty_read(multicast_channel, Key) of
+        [#multicast_channel{}] ->
+            ok;
+        _Else ->
+            {error, {unknown_devaddr, lorawan_utils:binary_to_hex(Key)}}
+        end
+    end,
+    
     case mnesia:dirty_read(node, DevAddr) of
         [#node{}] ->
             ok;
         _Else ->
-            case mnesia:dirty_read(multicast_channel, DevAddr) of
-                [#multicast_channel{}] ->
-                    ok;
-                _Else ->
-                    {error, {unknown_devaddr, lorawan_utils:binary_to_hex(DevAddr)}}
-            end
+            V(DevAddr)
     end;
 validate_key(_Else, _) ->
-    ok.
+    ok.    
 
 websocket_init(#state{conn=#connector{connid=Id, app=App}, bindings=Bindings} = State) ->
     lager:debug("WebSocket connector ~p with ~p", [Id, Bindings]),
