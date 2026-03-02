@@ -17,6 +17,22 @@ The plan is ordered by implementation risk and dependency chain.
 - 1.1 MAC commands are missing (`Rekey`, `ADRParamSetup`, `ForceRejoin`, `RejoinParamSetup`).
 - DevNonce replay handling is not strong enough for modern deployments.
 
+## Baseline Regression Tests (added)
+These tests lock current 1.0.3-era behavior so refactoring for 1.0.4/1.1.0 can be done safely.
+
+- `src/lorawan_mac.erl`
+  - crypto vector compatibility (`cipher/5`, `b0/4`)
+  - frame counter gap/increment semantics
+  - CFList encoding behavior
+- `src/lorawan_mac_commands.erl`
+  - uplink FOpts parsing vector
+  - downlink FOpts encoding vector
+  - existing DeviceTime reference test
+
+Run locally:
+- `rebar3 eunit --module=lorawan_mac`
+- `rebar3 eunit --module=lorawan_mac_commands`
+
 ---
 
 ## Phase 0: Safety Rails Before Protocol Changes
@@ -223,4 +239,3 @@ Acceptance:
 - [ ] 1.1 profile passes conformance and field tests.
 - [ ] Legacy 1.0.x fleet has no regression in join/data reliability.
 - [ ] Rollback is configuration-only (no emergency DB rollback needed).
-
