@@ -568,4 +568,37 @@ padded(Bytes, Msg) ->
         N -> <<Msg/bitstring, 0:(8*Bytes-N)>>
     end.
 
+-include_lib("eunit/include/eunit.hrl").
+
+crypto_compat_test_() ->
+    Key = lorawan_utils:hex_to_binary(<<"2B7E151628AED2A6ABF7158809CF4F3C">>),
+    DevAddr = <<16#11223344:32>>,
+    FCnt = 16#1234,
+    Data = <<1,2,3,4,5,6,7,8,9,10,11>>,
+    Ciphered = cipher(Data, Key, 0, DevAddr, FCnt),
+    [
+        ?_assertEqual(<<"C6A8E1464260FB6DBEB05D">>, lorawan_utils:binary_to_hex(Ciphered)),
+        ?_assertEqual(Data,
+            lorawan_utils:reverse(
+                cipher(lorawan_utils:reverse(Ciphered), Key, 0, DevAddr, FCnt))),
+        ?_assertEqual(<<"49000000000144332211785634120014">>,
+            lorawan_utils:binary_to_hex(b0(1, DevAddr, 16#12345678, 20)))
+    ].
+
+frame_counter_compat_test_() ->
+    [
+        ?_assertEqual(1, fcnt16_gap(10, 11)),
+        ?_assertEqual(1, fcnt16_gap(16#FFFF, 1)),
+        ?_assertEqual(2, fcnt32_gap(16#00010001, 3)),
+        ?_assertEqual(16#FFFFFFFF, fcnt32_inc(16#FFFFFFFE, 1)),
+        ?_assertEqual(0, fcnt32_inc(16#FFFFFFFF, 1))
+    ].
+
+cflist_encoding_test_() ->
+    [
+        ?_assertEqual(<<"184F84E8568400000000000000000000">>,
+            lorawan_utils:binary_to_hex(encode_cflist([{867.1, 0, 5}, {867.3, 0, 5}]))),
+        ?_assertEqual(<<>>, encode_cflist([]))
+    ].
+
 % end of file

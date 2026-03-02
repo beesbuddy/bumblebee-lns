@@ -455,7 +455,25 @@ add_when_zero(_Error, 1, List) -> List.
 command_test_()-> [
     % from the LoRaWAN Specification 1.0.3, Section 5.9
     ?_assertEqual({device_time_ans,1139322288000},
-        send_device_time([{<<>>, #rxq{time={{2016, 2, 12}, {14, 24, 31}}, tmms=undefined}}]))
+        send_device_time([{<<>>, #rxq{time={{2016, 2, 12}, {14, 24, 31}}, tmms=undefined}}])),
+    ?_assertEqual(
+        [link_check_req, {link_adr_ans, 1, 0, 1}, duty_cycle_ans,
+            {rx_param_setup_ans, 1, 1, 1}, {dev_status_ans, 100, 10},
+            {new_channel_ans, 1, 1}, rx_timing_setup_ans, tx_param_setup_ans,
+            {di_channel_ans, 1, 1}, device_time_req],
+        parse_fopts(<<16#02, 16#03, 16#05, 16#04, 16#05, 16#07, 16#06, 100, 16#0A,
+            16#07, 16#03, 16#08, 16#09, 16#0A, 16#03, 16#0D>>)),
+    ?_assertEqual(
+        <<16#02, 16#01, 16#02, 16#03, 16#34, 16#FF, 16#00, 16#21, 16#04, 16#05,
+            16#08, 16#07, 16#09, 16#20, 16#0A, 16#01, 16#18, 16#4F, 16#84,
+            16#0D, 16#B0, 16#AD, 16#E8, 16#43, 16#00>>,
+        encode_fopts([{link_check_ans, 1, 2},
+            {link_adr_req, 3, 4, 16#00FF, 2, 1},
+            {duty_cycle_req, 5},
+            {rx_timing_setup_req, 7},
+            {tx_param_setup_req, 1, 0, 0},
+            {di_channel_req, 1, 8671000},
+            {device_time_ans, 1139322288000}]))
 ].
 
 % end of file
