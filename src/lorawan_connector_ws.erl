@@ -120,7 +120,7 @@ validate_key(_Else, _) ->
     ok.    
 
 websocket_init(#state{conn=#connector{connid=Id, app=App}, bindings=Bindings} = State) ->
-    lager:debug("WebSocket connector ~p with ~p", [Id, Bindings]),
+    _ = lager:debug("WebSocket connector ~p with ~p", [Id, Bindings]),
     ok = lorawan_compat:pg_join({backend, App}, self()),
     {ok, State}.
 
@@ -132,7 +132,7 @@ websocket_handle({ping, _}, State) ->
     % no action needed as server handles pings automatically
     {ok, State};
 websocket_handle(Data, State) ->
-    lager:warning("Unknown handle ~w", [Data]),
+    _ = lager:warning("Unknown handle ~w", [Data]),
     {ok, State}.
 
 handle_downlink(Msg, #state{conn=Connector, bindings=Bindings}=State) ->
@@ -178,7 +178,7 @@ websocket_info({status, From}, #state{conn=#connector{connid=Id, app=App}, path=
             connid => Id, app => App, uri => Uri, status => <<"connected">>}]},
     {ok, State};
 websocket_info(Info, State) ->
-    lager:warning("Unknown info ~p", [Info]),
+    _ = lager:warning("Unknown info ~p", [Info]),
     {ok, State}.
 
 encode_uplink(<<"raw">>, Vars) ->
@@ -189,7 +189,7 @@ encode_uplink(<<"www-form">>, Vars) ->
     {text, lorawan_connector:form_encode(Vars)}.
 
 terminate(Reason, _Req, _State) ->
-    lager:debug("WebSocket terminated: ~p", [Reason]),
+    _ = lager:debug("WebSocket terminated: ~p", [Reason]),
     ok.
 
 % end of file
