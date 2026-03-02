@@ -6,7 +6,7 @@
 -module(test_forwarder).
 -behaviour(gen_server).
 
--export([start_link/2, stop/1, push_and_pull/2, rxpk/1]).
+-export([start_link/2, stop/1, push_and_pull/2, push_and_pull/3, rxpk/1]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 -record(state, {mac, server, socket, motes, rxpks, push_tokens, pull_tokens}).
@@ -22,10 +22,13 @@ stop(Gateway) ->
     gen_server:stop(Gateway).
 
 push_and_pull(Gateway, Data) ->
+    push_and_pull(Gateway, Data, 2000).
+
+push_and_pull(Gateway, Data, TimeoutMs) ->
     Gateway ! {uplink, self(), Data},
     receive
         Response -> Response
-        after 2000 -> {error, timeout}
+        after TimeoutMs -> {error, timeout}
     end.
 
 init([MAC, Server]) ->

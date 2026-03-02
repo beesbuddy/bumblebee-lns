@@ -21,12 +21,16 @@
 loramote_test_() ->
     {setup,
         fun() ->
+            _ = application:stop(bumblebee),
+            _ = application:stop(mnesia),
+            ok = test_env:configure_ports(),
             {ok, _} = application:ensure_all_started(bumblebee),
+            ok = test_env:wait_http_ready(),
             lager:set_loglevel(lager_console_backend, debug),
             test_admin:add_area(?AREA),
             test_admin:add_gateway(?AREA, ?GWMAC),
             test_admin:add_network(?NET),
-            {ok, Gateway} = test_forwarder:start_link(?GWMAC, {"localhost", 1680}),
+            {ok, Gateway} = test_forwarder:start_link(?GWMAC, test_env:gateway_server()),
             test_admin:add_group(?NET, ?GROUP),
             test_admin:add_profile(?GROUP, ?PROF),
             test_admin:add_node(?PROF, ?NODE0),

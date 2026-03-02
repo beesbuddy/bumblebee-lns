@@ -24,7 +24,11 @@
 load_test_() ->
     {setup,
         fun() ->
+            _ = application:stop(bumblebee),
+            _ = application:stop(mnesia),
+            ok = test_env:configure_ports(),
             {ok, _} = application:ensure_all_started(bumblebee),
+            ok = test_env:wait_http_ready(),
             lager:set_loglevel(lager_console_backend, debug),
             test_admin:add_area(?AREA),
             Gateways =
@@ -32,7 +36,7 @@ load_test_() ->
                     fun(ID) ->
                         MAC = <<0,0,0,0,0,0,0,ID>>,
                         test_admin:add_gateway(?AREA, MAC),
-                        {ok, Gateway} = test_forwarder:start_link(MAC, {"localhost", 1680}),
+                        {ok, Gateway} = test_forwarder:start_link(MAC, test_env:gateway_server()),
                         {ID, Gateway}
                     end,
                     lists:seq(1,?GW_COUNT)),

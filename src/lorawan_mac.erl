@@ -438,8 +438,8 @@ accept_rxwin(#profile{rxwin_set={A1,B1,_}}, #network{rxwin_init={A2,B2,C}}) ->
         true -> B2
     end,
     C};
-accept_rxwin(_Else, ABC) ->
-    ABC.
+accept_rxwin(_Else, #network{rxwin_init=Init}) ->
+    Init.
 
 encode_accept(#network{netid=NetID, rx1_delay=RxDelay, cflist=CFList}, #device{appkey=AppKey},
         #node{devaddr=DevAddr, rxwin_use={RX1DROffset, RX2DataRate, _}}=Node, AppNonce) ->
