@@ -36,3 +36,4 @@ priv/admin/colorpicker.min.css
 priv/admin/*.gz
 backup-*/*.json
 log/
+*.log
