@@ -13,6 +13,8 @@
 -include("lorawan.hrl").
 -include("lorawan_db.hrl").
 
+-define(LEGACY_REALM, <<"lorawan-server">>).
+
 handle_authentication(Req) ->
     handle_authentication_field(Req,
         cowboy_req:parse_header(<<"authorization">>, Req)).
@@ -21,14 +23,14 @@ handle_authentication(Req) ->
 handle_authentication_field(_Req, {basic, User, Pass}) ->
     case mnesia:dirty_read(user, User) of
         [#user{pass_ha1=HA1, scopes=AuthScopes}] ->
-            case lorawan_http_digest:ha1({User, ?REALM, Pass}) of
-                HA1 ->
+            case valid_ha1(User, Pass, HA1) of
+                true ->
                     {true, AuthScopes};
-                _Else ->
-                    {false, erlang:iolist_to_binary([<<"Basic realm=\"">>, ?REALM, $"])}
+                false ->
+                    {false, basic_header()}
             end;
         [] ->
-            {false, erlang:iolist_to_binary([<<"Basic realm=\"">>, ?REALM, $"])}
+            {false, basic_header()}
     end;
 % when the client did respond to the HTTP Digest challenge
 handle_authentication_field(Req, {digest, Params}) ->
@@ -44,10 +46,10 @@ handle_authentication_field(Req, {digest, Params}) ->
                 Response ->
                     {true, AuthScopes};
                 _Else ->
-                    {false, digest_header()}
+                    {false, basic_header()}
             end;
         [] ->
-            {false, digest_header()}
+            {false, basic_header()}
     end;
 % if nothing was provided
 handle_authentication_field(Req, _Else) ->
@@ -55,7 +57,7 @@ handle_authentication_field(Req, _Else) ->
         <<"OPTIONS">> ->
             preflight;
         _ ->
-            {false, digest_header()}
+            {false, basic_header()}
     end.
 
 handle_authorization(Req, {Read, Write}) ->
@@ -101,10 +103,12 @@ auth_field(_, '*') ->
 auth_field(Field, AuthFields) ->
     lists:member(Field, AuthFields).
 
-digest_header() ->
-    Nonce = lorawan_http_digest:nonce(16),
-    lorawan_http_digest:header(digest, [
-        {<<"realm">>, ?REALM}, {<<"nonce">>, Nonce}, {<<"domain">>, <<"/">>}]).
+basic_header() ->
+    erlang:iolist_to_binary([<<"Basic realm=\"">>, ?REALM, $"]).
+
+valid_ha1(User, Pass, HA1) ->
+    HA1 == lorawan_http_digest:ha1({User, ?REALM, Pass})
+        orelse HA1 == lorawan_http_digest:ha1({User, ?LEGACY_REALM, Pass}).
 
 authorized_fields(AuthScopes, ReqScopes) ->
     merge_scopes(
