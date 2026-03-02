@@ -1,6 +1,5 @@
 # Build container
-FROM erlang:21-alpine AS scratch
-MAINTAINER Petr Gotthard <petr.gotthard@centrum.cz>
+FROM erlang:26-alpine AS scratch
 
 RUN apk add --no-cache --virtual build-deps git make wget nodejs-npm && \
     git clone https://github.com/gotthardp/bumblebee.git && \
@@ -8,7 +7,7 @@ RUN apk add --no-cache --virtual build-deps git make wget nodejs-npm && \
     make release
 
 # Deployment container
-FROM erlang:21-alpine
+FROM erlang:26-alpine
 
 ## Not likely to change with rebuilds
 
