@@ -13,7 +13,9 @@
 
 init(StreamId, Req, Opts) ->
     {Command, Next} = cowboy_stream:init(StreamId, Req, Opts),
-    {Command, #state{next=Next, path=path(Req), user=username(Req), peer=cowboy_req:peer(Req)}}.
+    {Command, #state{
+        next = Next, path = path(Req), user = username(Req), peer = cowboy_req:peer(Req)
+    }}.
 
 path(#{path := Path, qs := <<>>}) ->
     Path;
@@ -28,28 +30,30 @@ username(Req) ->
             <<>>
     end.
 
-data(StreamId, IsFin, Data, #state{next=Next0}=State) ->
+data(StreamId, IsFin, Data, #state{next = Next0} = State) ->
     {Command, Next} = cowboy_stream:data(StreamId, IsFin, Data, Next0),
-    {Command, State#state{next=Next}}.
+    {Command, State#state{next = Next}}.
 
-info(StreamId, Response, #state{next=Next0, path=Path, user=User, peer=Peer}=State) ->
-    {Command, Next} = cowboy_stream:info(StreamId, handle_response(Response, Path, User, Peer), Next0),
-    {Command, State#state{next=Next}}.
+info(StreamId, Response, #state{next = Next0, path = Path, user = User, peer = Peer} = State) ->
+    {Command, Next} = cowboy_stream:info(
+        StreamId, handle_response(Response, Path, User, Peer), Next0
+    ),
+    {Command, State#state{next = Next}}.
 
-handle_response({response, Status, Headers, Body}, _Path, _User, _Peer)
-        when Status == 401 orelse Status div 100 == 2 ->
+handle_response({response, Status, Headers, Body}, _Path, _User, _Peer) when
+    Status == 401 orelse Status div 100 == 2
+->
     {response, Status, add_extra_headers(Headers), Body};
-handle_response({headers, Status, Headers}, _Path, _User, _Peer)
-        when Status == 401 orelse Status div 100 == 2 ->
+handle_response({headers, Status, Headers}, _Path, _User, _Peer) when
+    Status == 401 orelse Status div 100 == 2
+->
     {headers, Status, add_extra_headers(Headers)};
-
-handle_response({response, Status, _Headers, _Body}=Response, Path, User, Peer) ->
+handle_response({response, Status, _Headers, _Body} = Response, Path, User, Peer) ->
     log_error(Status, Path, User, Peer),
     Response;
-handle_response({headers, Status, _Headers}=Response, Path, User, Peer) ->
+handle_response({headers, Status, _Headers} = Response, Path, User, Peer) ->
     log_error(Status, Path, User, Peer),
     Response;
-
 handle_response(Else, _Path, _User, _Peer) ->
     Else.
 
@@ -60,9 +64,11 @@ add_extra_headers(Headers) ->
 log_error(Status, _Path, _User, _Peer) when Status == 301; Status == 304; Status == 401 ->
     ok;
 log_error(Status, Path, User, {IP, _Port}) ->
-    lorawan_utils:throw_warning(server, {http_error, {Status, binary_to_list(Path), User, inet:ntoa(IP)}}).
+    lorawan_utils:throw_warning(
+        server, {http_error, {Status, binary_to_list(Path), User, inet:ntoa(IP)}}
+    ).
 
-terminate(StreamId, Reason, #state{next=Next0}) ->
+terminate(StreamId, Reason, #state{next = Next0}) ->
     cowboy_stream:terminate(StreamId, Reason, Next0).
 
 early_error(StreamId, Reason, PartialReq, Resp, Opts) ->

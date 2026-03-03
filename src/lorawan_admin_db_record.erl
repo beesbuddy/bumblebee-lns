@@ -26,25 +26,28 @@ init(Req, {Table, Fields, Module, Scopes}) ->
     init0(Req, Table, Fields, Module, Scopes).
 
 init0(Req, Table, Fields, Module, Scopes) ->
-    Key = lorawan_admin:parse_field(hd(Fields),
-        cowboy_req:binding(id, Req, cowboy_req:binding(hd(Fields), Req))),
-    {cowboy_rest, Req,
-        #state{table=Table, fields=Fields, key=Key, module=Module, scopes=Scopes}}.
+    Key = lorawan_admin:parse_field(
+        hd(Fields),
+        cowboy_req:binding(id, Req, cowboy_req:binding(hd(Fields), Req))
+    ),
+    {cowboy_rest, Req, #state{
+        table = Table, fields = Fields, key = Key, module = Module, scopes = Scopes
+    }}.
 
-allowed_methods(Req, #state{key=undefined}=State) ->
+allowed_methods(Req, #state{key = undefined} = State) ->
     {[<<"OPTIONS">>, <<"GET">>, <<"POST">>, <<"DELETE">>], Req, State};
 allowed_methods(Req, State) ->
     {[<<"OPTIONS">>, <<"GET">>, <<"PUT">>, <<"DELETE">>], Req, State}.
 
-is_authorized(Req, #state{scopes=Scopes}=State) ->
+is_authorized(Req, #state{scopes = Scopes} = State) ->
     case lorawan_admin:handle_authorization_ex(Req, Scopes) of
         {true, ReadFields, WriteFields} ->
-            {true, Req, State#state{auth_fields={ReadFields, WriteFields}}};
+            {true, Req, State#state{auth_fields = {ReadFields, WriteFields}}};
         Else ->
             {Else, Req, State}
     end.
 
-forbidden(Req, #state{fields=[Key | _], auth_fields={ReadFields, WriteFields}}=State) ->
+forbidden(Req, #state{fields = [Key | _], auth_fields = {ReadFields, WriteFields}} = State) ->
     Method = cowboy_req:method(Req),
     if
         Method == <<"OPTIONS">>; Method == <<"GET">> ->
@@ -57,15 +60,22 @@ forbidden(Req, #state{fields=[Key | _], auth_fields={ReadFields, WriteFields}}=S
     end.
 
 content_types_provided(Req, State) ->
-    {[
-        {{<<"application">>, <<"json">>, []}, handle_get}
-    ], Req, State}.
+    {
+        [
+            {{<<"application">>, <<"json">>, []}, handle_get}
+        ],
+        Req,
+        State
+    }.
 
-handle_get(Req, #state{key=undefined}=State) ->
+handle_get(Req, #state{key = undefined} = State) ->
     Req2 = cowboy_req:set_resp_header(<<"cache-control">>, <<"no-store">>, Req),
-    paginate(Req2, State,
-        sort(Req2, read_records(Req2, State)));
-handle_get(Req, #state{table=Table, key=Key}=State) ->
+    paginate(
+        Req2,
+        State,
+        sort(Req2, read_records(Req2, State))
+    );
+handle_get(Req, #state{table = Table, key = Key} = State) ->
     Req2 = cowboy_req:set_resp_header(<<"cache-control">>, <<"no-store">>, Req),
     [Rec] = mnesia:dirty_read(Table, Key),
     {jsx:encode(build_record(Rec, State)), Req2, State}.
@@ -78,7 +88,7 @@ paginate(Req, State, List) ->
         #{'_page' := Page0, '_perPage' := PerPage0} ->
             {Page, PerPage} = {binary_to_integer(Page0), binary_to_integer(PerPage0)},
             % io:format("~p", [List]),
-            {jsx:encode(lists:sublist(List, 1+(Page-1)*PerPage, PerPage)), Req2, State}
+            {jsx:encode(lists:sublist(List, 1 + (Page - 1) * PerPage, PerPage)), Req2, State}
     end.
 
 sort(Req, List) ->
@@ -87,22 +97,26 @@ sort(Req, List) ->
             List;
         #{'_sortDir' := <<"ASC">>, '_sortField' := Field} ->
             lists:sort(
-                fun(A0,B0) ->
+                fun(A0, B0) ->
                     case {get_field(Field, A0), get_field(Field, B0)} of
                         {null, _B} -> true;
                         {_A, null} -> false;
                         {A, B} -> A =< B
                     end
-                end, List);
+                end,
+                List
+            );
         #{'_sortDir' := <<"DESC">>, '_sortField' := Field} ->
             lists:sort(
-                fun(A0,B0) ->
+                fun(A0, B0) ->
                     case {get_field(Field, A0), get_field(Field, B0)} of
                         {_A, null} -> true;
                         {null, _B} -> false;
                         {A, B} -> A >= B
                     end
-                end, List)
+                end,
+                List
+            )
     end.
 
 get_field(Field, Value) ->
@@ -116,12 +130,13 @@ get_fields([Field | Rest], Value) ->
 get_fields([], Value) ->
     Value.
 
-read_records(Req, #state{table=Table, fields=Fields, module=Module}=State) ->
+read_records(Req, #state{table = Table, fields = Fields, module = Module} = State) ->
     Filter = apply(Module, parse, [get_filters(Req)]),
-    Match = list_to_tuple([Table|[maps:get(X, Filter, '_') || X <- Fields]]),
+    Match = list_to_tuple([Table | [maps:get(X, Filter, '_') || X <- Fields]]),
     lists:map(
-        fun(Rec)-> build_record(Rec, State) end,
-        mnesia:dirty_select(Table, [{Match, [], ['$_']}])).
+        fun(Rec) -> build_record(Rec, State) end,
+        mnesia:dirty_select(Table, [{Match, [], ['$_']}])
+    ).
 
 get_filters(Req) ->
     case cowboy_req:match_qs([{'_filters', [], <<"{}">>}], Req) of
@@ -129,8 +144,9 @@ get_filters(Req) ->
             jsx:decode(Filter, [return_maps, {labels, atom}])
     end.
 
-build_record(Rec, #state{fields=Fields, module=Module, auth_fields={ReadFields, _}}) ->
-    key_to_id(hd(Fields),
+build_record(Rec, #state{fields = Fields, module = Module, auth_fields = {ReadFields, _}}) ->
+    key_to_id(
+        hd(Fields),
         apply(Module, build, [
             maps:from_list(
                 lists:filter(
@@ -141,15 +157,22 @@ build_record(Rec, #state{fields=Fields, module=Module, auth_fields={ReadFields, 
                         ({pass_ha1, _}) -> false;
                         ({Name, _}) -> lorawan_admin:auth_field(Name, ReadFields)
                     end,
-                    lists:zip(Fields, tl(tuple_to_list(Rec)))))
-            ])).
+                    lists:zip(Fields, tl(tuple_to_list(Rec)))
+                )
+            )
+        ])
+    ).
 
 content_types_accepted(Req, State) ->
-    {[
-        {{<<"application">>, <<"json">>, '*'}, handle_write}
-    ], Req, State}.
+    {
+        [
+            {{<<"application">>, <<"json">>, '*'}, handle_write}
+        ],
+        Req,
+        State
+    }.
 
-handle_write(Req, #state{fields=Fields}=State) ->
+handle_write(Req, #state{fields = Fields} = State) ->
     {ok, Data, Req2} = cowboy_req:read_body(Req),
     case catch jsx:decode(Data, [return_maps, {labels, atom}]) of
         Map when is_map(Map) ->
@@ -164,15 +187,18 @@ handle_write(Req, #state{fields=Fields}=State) ->
             {stop, cowboy_req:reply(400, Req2), State}
     end.
 
-import_records([First|Rest], State) ->
+import_records([First | Rest], State) ->
     {ok, ID} = write_record(First, State),
     [ID | import_records(Rest, State)];
 import_records([], _State) ->
     [].
 
-write_record(List, #state{table=Table, fields=Fields, module=Module}=State) ->
-    List2 = apply(Module, parse,
-        [id_to_key(hd(Fields), List)]),
+write_record(List, #state{table = Table, fields = Fields, module = Module} = State) ->
+    List2 = apply(
+        Module,
+        parse,
+        [id_to_key(hd(Fields), List)]
+    ),
     % make sure there is a primary key
     case maps:get(hd(Fields), List2, undefined) of
         undefined ->
@@ -182,11 +208,12 @@ write_record(List, #state{table=Table, fields=Fields, module=Module}=State) ->
                 fun() ->
                     Rec = list_to_tuple([Table | fields_to_write(List2, State)]),
                     apply(Module, write, [Rec])
-                end),
+                end
+            ),
             {ok, ID}
     end.
 
-fields_to_write(List2, #state{table=Table, fields=Fields, auth_fields={_, WriteFields}}) ->
+fields_to_write(List2, #state{table = Table, fields = Fields, auth_fields = {_, WriteFields}}) ->
     Original =
         if
             WriteFields == '*', Table /= user ->
@@ -203,11 +230,21 @@ fields_to_write(List2, #state{table=Table, fields=Fields, auth_fields={_, WriteF
     get_db_fields(Fields, WriteFields, List2, Original, []).
 
 get_db_fields([Field | Fields], AuthFields, List2, undefined, Acc) ->
-    get_db_fields(Fields, AuthFields, List2, undefined,
-        [get_db_field(Field, AuthFields, List2, undefined) | Acc]);
+    get_db_fields(
+        Fields,
+        AuthFields,
+        List2,
+        undefined,
+        [get_db_field(Field, AuthFields, List2, undefined) | Acc]
+    );
 get_db_fields([Field | Fields], AuthFields, List2, [Orig | Original], Acc) ->
-    get_db_fields(Fields, AuthFields, List2, Original,
-        [get_db_field(Field, AuthFields, List2, Orig) | Acc]);
+    get_db_fields(
+        Fields,
+        AuthFields,
+        List2,
+        Original,
+        [get_db_field(Field, AuthFields, List2, Orig) | Acc]
+    );
 get_db_fields([], _, _, _, Acc) ->
     lists:reverse(Acc).
 
@@ -232,17 +269,19 @@ get_db_field(Field, AuthFields, List2, Orig) ->
             Orig
     end.
 
-resource_exists(Req, #state{key=undefined}=State) ->
+resource_exists(Req, #state{key = undefined} = State) ->
     {true, Req, State};
-resource_exists(Req, #state{table=Table, key=Key}=State) ->
+resource_exists(Req, #state{table = Table, key = Key} = State) ->
     case mnesia:dirty_read(Table, Key) of
         [] -> {false, Req, State};
         [_] -> {true, Req, State}
     end.
 
-generate_etag(Req, #state{key=undefined}=State) ->
+generate_etag(Req, #state{key = undefined} = State) ->
     {undefined, Req, State};
-generate_etag(Req, #state{table=Table, fields=Fields, key=Key, auth_fields={_, WriteFields}}=State) ->
+generate_etag(
+    Req, #state{table = Table, fields = Fields, key = Key, auth_fields = {_, WriteFields}} = State
+) ->
     case mnesia:dirty_read(Table, Key) of
         [] ->
             {undefined, Req, State};
@@ -252,29 +291,38 @@ generate_etag(Req, #state{table=Table, fields=Fields, key=Key, auth_fields={_, W
             FiltRec =
                 lists:filter(
                     fun
-                        ({Private, _}) when Private == health_alerts; Private == health_decay;
-                            Private == health_reported; Private == health_next -> false;
-                        ({Name, _}) -> lorawan_admin:auth_field(Name, WriteFields)
+                        ({Private, _}) when
+                            Private == health_alerts;
+                            Private == health_decay;
+                            Private == health_reported;
+                            Private == health_next
+                        ->
+                            false;
+                        ({Name, _}) ->
+                            lorawan_admin:auth_field(Name, WriteFields)
                     end,
-                    lists:zip(Fields, tl(tuple_to_list(Rec)))),
+                    lists:zip(Fields, tl(tuple_to_list(Rec)))
+                ),
             % create the etag value
             Hash = base64:encode(crypto:hash(sha256, term_to_binary(FiltRec))),
             {<<$", Hash/binary, $">>, Req, State}
     end.
 
-delete_resource(Req, #state{table=Table, key=undefined}=State) ->
+delete_resource(Req, #state{table = Table, key = undefined} = State) ->
     {atomic, ok} = mnesia:clear_table(Table),
     {true, Req, State};
-delete_resource(Req, #state{table=Table, fields=Fields, key=Key}=State) ->
+delete_resource(Req, #state{table = Table, fields = Fields, key = Key} = State) ->
     Req2 = lorawan_admin:set_body_json_id(hd(Fields), Key, Req),
     ok = mnesia:dirty_delete(Table, Key),
     {true, Req2, State}.
 
 % React admin requires 'id' to operate
 key_to_id(Key, Rec) ->
-    maps:put(id,
+    maps:put(
+        id,
         maps:get(Key, Rec),
-        Rec).
+        Rec
+    ).
 
 % Database requires a Key to operate, but React provides an 'id'
 id_to_key(Key, Rec) ->

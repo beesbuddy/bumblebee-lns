@@ -16,26 +16,30 @@
 -record(state, {scopes, auth_fields}).
 
 init(Req, Scopes) ->
-    {cowboy_rest, Req, #state{scopes=Scopes}}.
+    {cowboy_rest, Req, #state{scopes = Scopes}}.
 
 allowed_methods(Req, State) ->
     {[<<"OPTIONS">>, <<"POST">>], Req, State}.
 
-is_authorized(Req, #state{scopes=Scopes}=State) ->
+is_authorized(Req, #state{scopes = Scopes} = State) ->
     case lorawan_admin:handle_authorization(Req, Scopes) of
         {true, AuthFields} ->
-            {true, Req, State#state{auth_fields=AuthFields}};
+            {true, Req, State#state{auth_fields = AuthFields}};
         Else ->
             {Else, Req, State}
     end.
 
-forbidden(Req, #state{auth_fields=AuthFields}=State) ->
+forbidden(Req, #state{auth_fields = AuthFields} = State) ->
     {lorawan_admin:fields_empty(AuthFields), Req, State}.
 
 content_types_accepted(Req, State) ->
-    {[
-        {'*', handle_write}
-    ], Req, State}.
+    {
+        [
+            {'*', handle_write}
+        ],
+        Req,
+        State
+    }.
 
 handle_write(Req, State) ->
     {ok, Headers, Req2} = cowboy_req:read_part(Req),

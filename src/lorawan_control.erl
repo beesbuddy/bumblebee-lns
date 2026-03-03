@@ -23,8 +23,7 @@ invoke(Module, Fun, Params) ->
     case rpc:call(Node, Module, Fun, Params) of
         ok -> ok;
         {atomic, _} -> ok;
-        {badrpc, Reason} ->
-            io:format("~w command failed: ~p~n", [Node, Reason])
+        {badrpc, Reason} -> io:format("~w command failed: ~p~n", [Node, Reason])
     end.
 
 % end of file

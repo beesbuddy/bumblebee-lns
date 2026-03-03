@@ -14,16 +14,17 @@ start_link() ->
     supervisor:start_link(?MODULE, []).
 
 init([]) ->
-    {ok, {{one_for_all, 2, 10}, [
-        {connectors,
-            {lorawan_connector_sup, start_link, []},
-            permanent, infinity, supervisor, [lorawan_connector_sup]},
-        {factory,
-            {lorawan_backend_factory, start_link, []},
-            permanent, 5000, worker, [lorawan_backend_factory]},
-        {monitor,
-            {lorawan_connector_monitor, start_link, []},
-            permanent, 5000, worker, [lorawan_connector_monitor]}
-    ]}}.
+    {ok,
+        {{one_for_all, 2, 10}, [
+            {connectors, {lorawan_connector_sup, start_link, []}, permanent, infinity, supervisor, [
+                    lorawan_connector_sup
+                ]},
+            {factory, {lorawan_backend_factory, start_link, []}, permanent, 5000, worker, [
+                lorawan_backend_factory
+            ]},
+            {monitor, {lorawan_connector_monitor, start_link, []}, permanent, 5000, worker, [
+                lorawan_connector_monitor
+            ]}
+        ]}}.
 
 % end of file

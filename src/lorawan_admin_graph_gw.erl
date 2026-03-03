@@ -18,77 +18,112 @@
 -record(state, {format, scopes, auth_fields}).
 
 init(Req, {Format, Scopes}) ->
-    {cowboy_rest, Req, #state{format=Format, scopes=Scopes}}.
+    {cowboy_rest, Req, #state{format = Format, scopes = Scopes}}.
 
 allowed_methods(Req, State) ->
     {[<<"OPTIONS">>, <<"GET">>], Req, State}.
 
-is_authorized(Req, #state{scopes=Scopes}=State) ->
+is_authorized(Req, #state{scopes = Scopes} = State) ->
     case lorawan_admin:handle_authorization(Req, Scopes) of
         {true, AuthFields} ->
-            {true, Req, State#state{auth_fields=AuthFields}};
+            {true, Req, State#state{auth_fields = AuthFields}};
         Else ->
             {Else, Req, State}
     end.
 
-forbidden(Req, #state{auth_fields=AuthFields}=State) ->
+forbidden(Req, #state{auth_fields = AuthFields} = State) ->
     {lorawan_admin:fields_empty(AuthFields), Req, State}.
 
 content_types_provided(Req, State) ->
-    {[
-        {{<<"application">>, <<"json">>, []}, get_gateway}
-    ], Req, State}.
+    {
+        [
+            {{<<"application">>, <<"json">>, []}, get_gateway}
+        ],
+        Req,
+        State
+    }.
 
-get_gateway(Req, #state{format=Type}=State) ->
+get_gateway(Req, #state{format = Type} = State) ->
     MAC = cowboy_req:binding(mac, Req),
     [Gateway] = mnesia:dirty_read(gateway, lorawan_utils:hex_to_binary(MAC)),
     {jsx:encode([{mac, MAC}, {array, get_array(Type, Gateway)}]), Req, State}.
 
-get_array(pgraph, #gateway{delays=Delays}) when is_list(Delays) ->
+get_array(pgraph, #gateway{delays = Delays}) when is_list(Delays) ->
     % construct Google Chart DataTable
     % see https://developers.google.com/chart/interactive/docs/reference#dataparam
-    [{cols, [
-        [{id, <<"timestamp">>}, {label, <<"Timestamp">>}, {type, <<"datetime">>}],
-        [{id, <<"avgdelay">>}, {label, <<"Average [ms]">>}, {type, <<"number">>}],
-        [{type, <<"number">>}, {role, <<"interval">>}],
-        [{type, <<"number">>}, {role, <<"interval">>}]
-    ]},
-    {rows, lists:filtermap(
-        fun ({Date, {Min, Avg, Max}}) ->
-            {true,  [{c, [
-                        [{v, lorawan_admin:timestamp_to_json_date(Date)}],
-                        [{v, Avg}],
-                        [{v, Min}],
-                        [{v, Max}]
-                    ]}]};
-        (_Else) ->
-            false
-        end, Delays)
-    }];
-get_array(tgraph, #gateway{dwell=Dwell}) when is_list(Dwell) ->
-    [{cols, [
-        [{id, <<"timestamp">>}, {label, <<"Timestamp">>}, {type, <<"datetime">>}],
-        [{id, <<"dwell">>}, {label, <<"Tx Time [ms]">>}, {type, <<"number">>}],
-        [{id, <<"sum">>}, {label, <<"Tx in Hour [ms]">>}, {type, <<"number">>}]
-    ]},
-    {rows, lists:filtermap(
-        fun ({Date, {_, Duration, Sum}}) ->
-            {true,  [{c, [
-                        [{v, lorawan_admin:timestamp_to_json_date(Date)}],
-                        [{v, if Duration == 0 -> null; true -> round(Duration) end}],
-                        [{v, Sum/36000}, {f, <<(integer_to_binary(round(Sum)))/binary,
-                            " (", (float_to_binary(Sum/36000, [{decimals, 3}, compact]))/binary, "%)">>}]
-                    ]}]};
-        (_Else) ->
-            false
-        end, Dwell)
-    }];
+    [
+        {cols, [
+            [{id, <<"timestamp">>}, {label, <<"Timestamp">>}, {type, <<"datetime">>}],
+            [{id, <<"avgdelay">>}, {label, <<"Average [ms]">>}, {type, <<"number">>}],
+            [{type, <<"number">>}, {role, <<"interval">>}],
+            [{type, <<"number">>}, {role, <<"interval">>}]
+        ]},
+        {rows,
+            lists:filtermap(
+                fun
+                    ({Date, {Min, Avg, Max}}) ->
+                        {true, [
+                            {c, [
+                                [{v, lorawan_admin:timestamp_to_json_date(Date)}],
+                                [{v, Avg}],
+                                [{v, Min}],
+                                [{v, Max}]
+                            ]}
+                        ]};
+                    (_Else) ->
+                        false
+                end,
+                Delays
+            )}
+    ];
+get_array(tgraph, #gateway{dwell = Dwell}) when is_list(Dwell) ->
+    [
+        {cols, [
+            [{id, <<"timestamp">>}, {label, <<"Timestamp">>}, {type, <<"datetime">>}],
+            [{id, <<"dwell">>}, {label, <<"Tx Time [ms]">>}, {type, <<"number">>}],
+            [{id, <<"sum">>}, {label, <<"Tx in Hour [ms]">>}, {type, <<"number">>}]
+        ]},
+        {rows,
+            lists:filtermap(
+                fun
+                    ({Date, {_, Duration, Sum}}) ->
+                        {true, [
+                            {c, [
+                                [{v, lorawan_admin:timestamp_to_json_date(Date)}],
+                                [
+                                    {v,
+                                        if
+                                            Duration == 0 -> null;
+                                            true -> round(Duration)
+                                        end}
+                                ],
+                                [
+                                    {v, Sum / 36000},
+                                    {f, <<
+                                        (integer_to_binary(round(Sum)))/binary,
+                                        " (",
+                                        (float_to_binary(Sum / 36000, [{decimals, 3}, compact]))/binary,
+                                        "%)"
+                                    >>}
+                                ]
+                            ]}
+                        ]};
+                    (_Else) ->
+                        false
+                end,
+                Dwell
+            )}
+    ];
 get_array(_, _Else) ->
     [].
 
 resource_exists(Req, State) ->
-    case mnesia:dirty_read(gateway,
-            lorawan_admin:parse_field(mac, cowboy_req:binding(mac, Req))) of
+    case
+        mnesia:dirty_read(
+            gateway,
+            lorawan_admin:parse_field(mac, cowboy_req:binding(mac, Req))
+        )
+    of
         [] -> {false, Req, State};
         [_Stats] -> {true, Req, State}
     end.

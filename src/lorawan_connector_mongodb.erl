@@ -15,7 +15,7 @@
 
 -record(state, {conn, pool, publish_uplinks, publish_events}).
 
-start_connector(#connector{connid=Id}=Connector) ->
+start_connector(#connector{connid = Id} = Connector) ->
     lorawan_connector_sup:start_child({mongodb, Id}, ?MODULE, [Connector]).
 
 stop_connector(Id) ->
@@ -24,23 +24,35 @@ stop_connector(Id) ->
 start_link(Connector) ->
     gen_server:start_link(?MODULE, [Connector], []).
 
-init([#connector{connid=Id, app=App, uri= <<"mongodb://", Servers0/binary>>,
-        publish_uplinks=PubUp, publish_events=PubEv}=Connector]) ->
+init([
+    #connector{
+        connid = Id,
+        app = App,
+        uri = <<"mongodb://", Servers0/binary>>,
+        publish_uplinks = PubUp,
+        publish_events = PubEv
+    } = Connector
+]) ->
     process_flag(trap_exit, true),
     ok = lorawan_compat:pg_join({backend, App}, self()),
     lager:debug("Connecting ~s to mongodb ~s", [Id, Servers0]),
     Pool = binary_to_atom(Id, latin1),
     % connect
     {UserName, Password} = credentials(Connector),
-    mongodb:replicaSets(Pool, 10,
-        string:lexemes(binary_to_list(Servers0), ", "), UserName, Password),
+    mongodb:replicaSets(
+        Pool,
+        10,
+        string:lexemes(binary_to_list(Servers0), ", "),
+        UserName,
+        Password
+    ),
     mongodb:connect(Pool),
     try
         {ok, #state{
-            conn=Connector,
-            pool=Pool,
-            publish_uplinks=lorawan_connector:prepare_filling(PubUp),
-            publish_events=lorawan_connector:prepare_filling(PubEv)
+            conn = Connector,
+            pool = Pool,
+            publish_uplinks = lorawan_connector:prepare_filling(PubUp),
+            publish_events = lorawan_connector:prepare_filling(PubEv)
         }}
     catch
         _:Error ->
@@ -48,10 +60,11 @@ init([#connector{connid=Id, app=App, uri= <<"mongodb://", Servers0/binary>>,
             {stop, shutdown}
     end.
 
-credentials(#connector{name=UserName})
-        when UserName == undefined; UserName == <<>> ->
+credentials(#connector{name = UserName}) when
+    UserName == undefined; UserName == <<>>
+->
     {undefined, undefined};
-credentials(#connector{name=UserName, pass=Password}) ->
+credentials(#connector{name = UserName, pass = Password}) ->
     {UserName, Password}.
 
 handle_call(_Request, _From, State) ->
@@ -63,39 +76,43 @@ handle_cast(_Msg, State) ->
 handle_info(nodes_changed, State) ->
     % nothing to do here
     {noreply, State};
-
-handle_info({uplink, _Node, Vars0}, #state{pool=Pool, publish_uplinks=PatPub}=State) ->
+handle_info({uplink, _Node, Vars0}, #state{pool = Pool, publish_uplinks = PatPub} = State) ->
     store_fields(Pool, PatPub, Vars0),
     {noreply, State};
-
-handle_info({event, _Node, Vars0}, #state{pool=Pool, publish_events=PatPub}=State) ->
+handle_info({event, _Node, Vars0}, #state{pool = Pool, publish_events = PatPub} = State) ->
     store_fields(Pool, PatPub, Vars0),
     {noreply, State};
-
-handle_info({status, From}, #state{conn=#connector{connid=Id, app=App, uri=Uri}}=State) ->
-    From ! {status, [
-        #{module => <<"mongodb">>, pid => lorawan_connector:pid_to_binary(self()),
-            connid => Id, app => App, uri => Uri, status => get_status(State)}]},
+handle_info({status, From}, #state{conn = #connector{connid = Id, app = App, uri = Uri}} = State) ->
+    From !
+        {status, [
+            #{
+                module => <<"mongodb">>,
+                pid => lorawan_connector:pid_to_binary(self()),
+                connid => Id,
+                app => App,
+                uri => Uri,
+                status => get_status(State)
+            }
+        ]},
     {noreply, State};
-
 handle_info(Unknown, State) ->
     lager:debug("Unknown message: ~p", [Unknown]),
     {noreply, State}.
 
-terminate(Reason, #state{conn=Connector, pool=Pool}) ->
+terminate(Reason, #state{conn = Connector, pool = Pool}) ->
     log_termination(Reason, Connector),
     mongodb:deleteConnection(Pool),
     ok.
 
-log_termination(Reason, #connector{connid=ConnId})
-        when Reason == normal; Reason == shutdown ->
+log_termination(Reason, #connector{connid = ConnId}) when
+    Reason == normal; Reason == shutdown
+->
     lager:debug("Connector ~s terminated: ~p", [ConnId, Reason]);
-log_termination(Reason, #connector{connid=ConnId}) ->
+log_termination(Reason, #connector{connid = ConnId}) ->
     lager:warning("Connector ~s terminated: ~p", [ConnId, Reason]).
 
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
-
 
 store_fields(_Pool, Pattern, _Vars0) when Pattern == undefined; Pattern == ?EMPTY_PATTERN ->
     ok;
@@ -127,9 +144,11 @@ prepare_bson(Data) ->
                 (_Key, undefined) -> false;
                 (_Key, _Value) -> true
             end,
-            Data)).
+            Data
+        )
+    ).
 
-get_status(#state{pool=Pool}) ->
+get_status(#state{pool = Pool}) ->
     case mongodb:is_connected(Pool) of
         true -> <<"connected">>;
         false -> <<"disconnected">>

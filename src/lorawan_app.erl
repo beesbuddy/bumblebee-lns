@@ -27,13 +27,15 @@ start(_Type, _Args) ->
             start_https(SslOpts, normal_dispatch());
         {HttpOpts, SslOpts} ->
             start_https(SslOpts, normal_dispatch()),
-            start_http(HttpOpts,
+            start_http(
+                HttpOpts,
                 case application:get_env(bumblebee, http_admin_redirect_ssl, true) of
                     false ->
                         normal_dispatch();
                     true ->
                         redirect_dispatch()
-                end)
+                end
+            )
     end,
     lorawan_sup:start_link().
 
@@ -77,27 +79,38 @@ ensure_erlang_version(Min) ->
 
 normal_dispatch() ->
     cowboy_router:compile([
-        {'_', lorawan_http_registry:get_static(routes)++lorawan_http_registry:get_custom(routes)}
+        {'_', lorawan_http_registry:get_static(routes) ++ lorawan_http_registry:get_custom(routes)}
     ]).
 
 redirect_dispatch() ->
     Port = ranch:get_port(https),
     lager:info("Redirecting to HTTPS port ~B", [Port]),
-    cowboy_router:compile([{'_',
-        [{'_', lorawan_admin_redirect, #{scheme => <<"https">>, port => Port}}]}]).
+    cowboy_router:compile([
+        {'_', [{'_', lorawan_admin_redirect, #{scheme => <<"https">>, port => Port}}]}
+    ]).
 
 start_http(Opts, Dispatch) ->
     {ok, _} = cowboy:start_clear(http, Opts, #{
         env => #{dispatch => Dispatch},
         metrics_callback => fun prometheus_cowboy2_instrumenter:observe/1,
-        stream_handlers => [lorawan_admin_logger, cowboy_compress_h,
-                            cowboy_metrics_h, cowboy_stream_h]}).
+        stream_handlers => [
+            lorawan_admin_logger,
+            cowboy_compress_h,
+            cowboy_metrics_h,
+            cowboy_stream_h
+        ]
+    }).
 
 start_https(Opts, Dispatch) ->
     {ok, _} = cowboy:start_tls(https, Opts, #{
         env => #{dispatch => Dispatch},
         metrics_callback => fun prometheus_cowboy2_instrumenter:observe/1,
-        stream_handlers => [lorawan_admin_logger, cowboy_compress_h,
-                            cowboy_metrics_h, cowboy_stream_h]}).
+        stream_handlers => [
+            lorawan_admin_logger,
+            cowboy_compress_h,
+            cowboy_metrics_h,
+            cowboy_stream_h
+        ]
+    }).
 
 % end of file

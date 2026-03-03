@@ -21,39 +21,44 @@
 init(Req, Scopes) ->
     App = cowboy_req:binding(app, Req),
     Action = cowboy_req:binding(action, Req),
-    {cowboy_rest, Req, #state{app=App, action=Action, scopes=Scopes}}.
+    {cowboy_rest, Req, #state{app = App, action = Action, scopes = Scopes}}.
 
-allowed_methods(Req, #state{action=undefined}=State) ->
+allowed_methods(Req, #state{action = undefined} = State) ->
     {[<<"OPTIONS">>, <<"GET">>], Req, State};
 allowed_methods(Req, State) ->
     {[<<"OPTIONS">>, <<"POST">>], Req, State}.
 
-is_authorized(Req, #state{scopes=Scopes}=State) ->
+is_authorized(Req, #state{scopes = Scopes} = State) ->
     case lorawan_admin:handle_authorization(Req, Scopes) of
         {true, AuthFields} ->
-            {true, Req, State#state{auth_fields=AuthFields}};
+            {true, Req, State#state{auth_fields = AuthFields}};
         Else ->
             {Else, Req, State}
     end.
 
-forbidden(Req, #state{auth_fields=AuthFields}=State) ->
+forbidden(Req, #state{auth_fields = AuthFields} = State) ->
     {lorawan_admin:fields_empty(AuthFields), Req, State}.
 
 content_types_provided(Req, State) ->
-    {[
-        {{<<"application">>, <<"json">>, []}, handle_get}
-    ], Req, State}.
+    {
+        [
+            {{<<"application">>, <<"json">>, []}, handle_get}
+        ],
+        Req,
+        State
+    }.
 
-handle_get(Req, #state{app=undefined}=State) ->
+handle_get(Req, #state{app = undefined} = State) ->
     Filter = lorawan_admin:parse(get_filters(Req)),
     Items =
         lists:filter(
             fun(Conn) ->
                 filter_matches(Conn, Filter)
             end,
-            get_connections(lorawan_compat:pg_which_groups(), [])),
+            get_connections(lorawan_compat:pg_which_groups(), [])
+        ),
     {jsx:encode(Items), Req, State};
-handle_get(Req, #state{app=App}=State) ->
+handle_get(Req, #state{app = App} = State) ->
     {jsx:encode(get_connection(App)), Req, State}.
 
 get_filters(Req) ->
@@ -72,13 +77,14 @@ filter_matches(Conn, Filter) ->
                 _ -> false
             end
         end,
-        maps:to_list(Filter)).
+        maps:to_list(Filter)
+    ).
 
-get_connections([{backend, App}|More], Acc) ->
-    get_connections(More, Acc++get_connection(App));
-get_connections([_Else|More], Acc) ->
+get_connections([{backend, App} | More], Acc) ->
+    get_connections(More, Acc ++ get_connection(App));
+get_connections([_Else | More], Acc) ->
     get_connections(More, Acc);
-get_connections([], Acc)->
+get_connections([], Acc) ->
     Acc.
 
 get_connection(App) ->
@@ -88,7 +94,9 @@ get_connection(App) ->
                 fun(Pid, Acc) ->
                     Acc ++ get_connection0(Pid, App)
                 end,
-                [], List);
+                [],
+                List
+            );
         {error, _} ->
             []
     end.
@@ -98,27 +106,38 @@ get_connection0(Pid, App) ->
     receive
         {status, Data} ->
             Data
-    after
-        500 ->
-            [#{pid => lorawan_connector:pid_to_binary(self()), app => App, status => <<"disconnected">>}]
+    after 500 ->
+        [
+            #{
+                pid => lorawan_connector:pid_to_binary(self()),
+                app => App,
+                status => <<"disconnected">>
+            }
+        ]
     end.
 
-
 content_types_accepted(Req, State) ->
-    {[
-        {{<<"application">>, <<"json">>, '*'}, handle_action}
-    ], Req, State}.
+    {
+        [
+            {{<<"application">>, <<"json">>, '*'}, handle_action}
+        ],
+        Req,
+        State
+    }.
 
-handle_action(Req, #state{app=App, action = <<"send">>}=State) ->
+handle_action(Req, #state{app = App, action = <<"send">>} = State) ->
     case lorawan_backend_factory:nodes_with_backend(App) of
-        [{Profile, #node{devaddr=DevAddr, appargs=AppArgs}=Node}|_] ->
+        [{Profile, #node{devaddr = DevAddr, appargs = AppArgs} = Node} | _] ->
             Vars = #{
                 event => <<"test">>,
                 app => App,
                 devaddr => DevAddr,
                 appargs => AppArgs,
-                datetime => calendar:universal_time()},
-            lager:debug("Sending connector test ~p to ~p", [App, lorawan_utils:binary_to_hex(DevAddr)]),
+                datetime => calendar:universal_time()
+            },
+            lager:debug("Sending connector test ~p to ~p", [
+                App, lorawan_utils:binary_to_hex(DevAddr)
+            ]),
             lorawan_backend_factory:event(App, {Profile, Node}, Vars);
         [] ->
             lager:debug("Connector not linked with any node")
@@ -127,9 +146,9 @@ handle_action(Req, #state{app=App, action = <<"send">>}=State) ->
 handle_action(Req, State) ->
     {stop, cowboy_req:reply(405, Req), State}.
 
-resource_exists(Req, #state{app=undefined}=State) ->
+resource_exists(Req, #state{app = undefined} = State) ->
     {true, Req, State};
-resource_exists(Req, #state{app=App}=State) ->
+resource_exists(Req, #state{app = App} = State) ->
     case mnesia:dirty_read(handler, App) of
         [#handler{}] ->
             {true, Req, State};

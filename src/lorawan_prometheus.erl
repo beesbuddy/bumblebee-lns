@@ -11,7 +11,7 @@
 
 %% Settings
 -define(METRICS_URL, "/metrics/[:registry]").
--record(state, {enabled=false}).
+-record(state, {enabled = false}).
 
 %% Public API
 start_link() ->
@@ -39,21 +39,24 @@ downlink(MAC) ->
 
 %% gen_server Callbacks
 init([]) ->
-    State = case application:get_env(bumblebee, enable_prometheus, false) of
-        false ->
-            #state{enabled=false};
-        true ->
-            create_counters(),
-            lorawan_http_registry:update({prometheus, lorawan},
-                #{routes => [{?METRICS_URL, prometheus_cowboy2_handler, []}]}),
-            #state{enabled=true}
-    end,
+    State =
+        case application:get_env(bumblebee, enable_prometheus, false) of
+            false ->
+                #state{enabled = false};
+            true ->
+                create_counters(),
+                lorawan_http_registry:update(
+                    {prometheus, lorawan},
+                    #{routes => [{?METRICS_URL, prometheus_cowboy2_handler, []}]}
+                ),
+                #state{enabled = true}
+        end,
     {ok, State}.
 
 handle_call(_Request, _From, State) ->
     {stop, {error, unknownmsg}, State}.
 
-handle_cast(_Message, #state{enabled=false}=State) ->
+handle_cast(_Message, #state{enabled = false} = State) ->
     {noreply, State};
 handle_cast({warning, Source, Text, Num}, State) ->
     {Entity, Eid} = expand_source(Source),
@@ -80,18 +83,26 @@ terminate(_Reason, _State) ->
 
 % Register Prometheus metrics
 create_counters() ->
-    prometheus_counter:declare([{name, lorawan_warnings_total},
-                                {help, "Number of warnings registered by the server"},
-                                {labels, [entity, eid, warning]}]),
-    prometheus_counter:declare([{name, lorawan_errors_total},
-                                {help, "Number of errors registered by the server"},
-                                {labels, [entity, eid, error]}]),
-    prometheus_counter:declare([{name, lorawan_uplinks_total},
-                                {help, "Number of uplink frames received by the server"},
-                                {labels, [gateway]}]),
-    prometheus_counter:declare([{name, lorawan_downlinks_total},
-                                {help, "Number of downlink frames sent by the server"},
-                                {labels, [gateway]}]).
+    prometheus_counter:declare([
+        {name, lorawan_warnings_total},
+        {help, "Number of warnings registered by the server"},
+        {labels, [entity, eid, warning]}
+    ]),
+    prometheus_counter:declare([
+        {name, lorawan_errors_total},
+        {help, "Number of errors registered by the server"},
+        {labels, [entity, eid, error]}
+    ]),
+    prometheus_counter:declare([
+        {name, lorawan_uplinks_total},
+        {help, "Number of uplink frames received by the server"},
+        {labels, [gateway]}
+    ]),
+    prometheus_counter:declare([
+        {name, lorawan_downlinks_total},
+        {help, "Number of downlink frames sent by the server"},
+        {labels, [gateway]}
+    ]).
 
 % Filter errors and warnings
 event0(warning, Source, Text, Num) ->
@@ -102,10 +113,10 @@ event0(_Severity, _Source, _Text, _Num) ->
     ok.
 
 % Expand event source, converting Id to HEX where necessary
-expand_source({server, Eid})    -> {server, Eid};
+expand_source({server, Eid}) -> {server, Eid};
 expand_source({connector, Eid}) -> {connector, Eid};
-expand_source({handler, Eid})   -> {handler, Eid};
+expand_source({handler, Eid}) -> {handler, Eid};
 % node, device, gateway, multicast_channel
-expand_source({Other, Eid})     -> {Other, lorawan_utils:binary_to_hex(Eid)};
+expand_source({Other, Eid}) -> {Other, lorawan_utils:binary_to_hex(Eid)};
 % uncaught in lorawan_utils:throw_event/3-4
-expand_source(Source)           -> {Source, undefined}.
+expand_source(Source) -> {Source, undefined}.

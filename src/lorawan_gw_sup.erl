@@ -16,16 +16,16 @@ start_link() ->
 
 init([]) ->
     {ok, PktFwdOpts} = application:get_env(bumblebee, packet_forwarder_listen),
-    {ok, {{one_for_one, 2, 10}, [
-        {gateway_router,
-            {lorawan_gw_router, start_link, []},
-            permanent, 5000, worker, [lorawan_gw_router]},
-        {packet_forwarder,
-            {lorawan_gw_forwarder, start_link, [PktFwdOpts]},
-            permanent, 5000, worker, [lorawan_gw_forwarder]},
-        {handlers,
-            {lorawan_handler_sup, start_link, []},
-            permanent, infinity, supervisor, [lorawan_handler_sup]}
-    ]}}.
+    {ok,
+        {{one_for_one, 2, 10}, [
+            {gateway_router, {lorawan_gw_router, start_link, []}, permanent, 5000, worker, [
+                lorawan_gw_router
+            ]},
+            {packet_forwarder, {lorawan_gw_forwarder, start_link, [PktFwdOpts]}, permanent, 5000,
+                worker, [lorawan_gw_forwarder]},
+            {handlers, {lorawan_handler_sup, start_link, []}, permanent, infinity, supervisor, [
+                lorawan_handler_sup
+            ]}
+        ]}}.
 
 % end of file

@@ -18,7 +18,7 @@
 
 init(Req, [Connector]) ->
     Bindings = lorawan_admin:parse(cowboy_req:bindings(Req)),
-    {cowboy_rest, Req, #state{connector=Connector, bindings=Bindings}}.
+    {cowboy_rest, Req, #state{connector = Connector, bindings = Bindings}}.
 
 is_authorized(Req, State) ->
     case lorawan_admin:handle_authorization(Req, {[], [{<<"device:send">>, '*'}]}) of
@@ -32,13 +32,17 @@ allowed_methods(Req, State) ->
     {[<<"OPTIONS">>, <<"PUT">>, <<"POST">>], Req, State}.
 
 content_types_accepted(Req, State) ->
-    {[
-        {{<<"application">>, <<"octet-stream">>, '*'}, handle_downlink},
-        {{<<"application">>, <<"json">>, '*'}, handle_downlink},
-        {{<<"application">>, <<"x-www-form-urlencoded">>, '*'}, handle_downlink}
-    ], Req, State}.
+    {
+        [
+            {{<<"application">>, <<"octet-stream">>, '*'}, handle_downlink},
+            {{<<"application">>, <<"json">>, '*'}, handle_downlink},
+            {{<<"application">>, <<"x-www-form-urlencoded">>, '*'}, handle_downlink}
+        ],
+        Req,
+        State
+    }.
 
-handle_downlink(Req, #state{connector=Connector, bindings=Bindings}=State) ->
+handle_downlink(Req, #state{connector = Connector, bindings = Bindings} = State) ->
     {ok, Msg, Req2} = cowboy_req:read_body(Req),
     case lorawan_connector:decode_and_downlink(Connector, Msg, Bindings) of
         ok ->

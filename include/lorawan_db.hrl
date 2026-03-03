@@ -13,7 +13,8 @@
 -type rxwin_config() :: {
     'undefined' | integer(),
     'undefined' | integer(),
-    'undefined' | number()}.
+    'undefined' | number()
+}.
 
 -record(rxq, {
     freq :: number(),
@@ -21,53 +22,68 @@
     codr :: binary(),
     time :: calendar:datetime(),
     tmms :: integer(),
-    reserved :: any(), %% for future use
+    %% for future use
+    reserved :: any(),
     rssi :: number(),
-    lsnr :: number()}).
+    lsnr :: number()
+}).
 
 -record(txq, {
     freq :: number(),
     datr :: binary() | integer(),
     codr :: binary(),
     time :: integer() | 'immediately' | calendar:datetime(),
-    powe :: 'undefined' | integer()}).
+    powe :: 'undefined' | integer()
+}).
 
 -record(area, {
     name :: nonempty_string(),
     region :: binary(),
     admins :: [nonempty_string()],
     slack_channel :: 'undefined' | string(),
-    log_ignored :: boolean()}).
+    log_ignored :: boolean()
+}).
 
 -record(gateway, {
     mac :: binary(),
     area :: 'undefined' | nonempty_string(),
-    tx_rfch :: integer(), % rf chain for downlinks
-    ant_gain :: integer(), % antenna gain
+    % rf chain for downlinks
+    tx_rfch :: integer(),
+    % antenna gain
+    ant_gain :: integer(),
     desc :: 'undefined' | string(),
-    gpspos :: {number(), number()}, % {latitude, longitude}
-    gpsalt :: 'undefined' | number(), % altitude
+    % {latitude, longitude}
+    gpspos :: {number(), number()},
+    % altitude
+    gpsalt :: 'undefined' | number(),
     ip_address :: {inet:ip_address(), inet:port_number(), integer()},
     last_alive :: 'undefined' | calendar:datetime(),
     last_gps :: 'undefined' | calendar:datetime(),
     last_report :: 'undefined' | calendar:datetime(),
-    dwell :: [{calendar:datetime(), {number(), number(), number()}}], % {frequency, duration, hoursum}
-    delays :: [{calendar:datetime(), {integer(), integer(), integer()}}], % {min, avg, max}
+    % {frequency, duration, hoursum}
+    dwell :: [{calendar:datetime(), {number(), number(), number()}}],
+    % {min, avg, max}
+    delays :: [{calendar:datetime(), {integer(), integer(), integer()}}],
     health_alerts :: [atom()],
     health_decay :: integer(),
     health_reported :: integer(),
-    health_next :: 'undefined' | calendar:datetime()}).
+    health_next :: 'undefined' | calendar:datetime()
+}).
 
 -record(multicast_channel, {
-    devaddr :: devaddr(), % multicast address
+    % multicast address
+    devaddr :: devaddr(),
     profiles :: [nonempty_string()],
     nwkskey :: seckey(),
     appskey :: seckey(),
-    fcntdown :: integer()}). % last downlink fcnt
+    % last downlink fcnt
+    fcntdown :: integer()
+}).
 
 -record(network, {
     name :: nonempty_string(),
-    netid :: binary(), % network id
+    % network id
+    netid :: binary(),
     region :: binary(),
     tx_codr :: binary(),
     join1_delay :: integer(),
@@ -82,15 +98,18 @@
     dcycle_init :: integer(),
     rxwin_init :: rxwin_config(),
     init_chans :: intervals(),
-    cflist :: 'undefined' | [{number(), integer(), integer()}]}).
+    cflist :: 'undefined' | [{number(), integer(), integer()}]
+}).
 
 -record(group, {
     name :: nonempty_string(),
     network :: nonempty_string(),
-    subid :: 'undefined' | bitstring(), % sub-network id
+    % sub-network id
+    subid :: 'undefined' | bitstring(),
     admins :: [nonempty_string()],
     slack_channel :: 'undefined' | string(),
-    can_join :: boolean()}).
+    can_join :: boolean()
+}).
 
 -record(profile, {
     name :: nonempty_string(),
@@ -100,64 +119,86 @@
     join :: 0..2,
     fcnt_check :: integer(),
     txwin :: integer(),
-    adr_mode :: 0..2, % server requests
-    adr_set :: adr_config(), % requested after join
+    % server requests
+    adr_mode :: 0..2,
+    % requested after join
+    adr_set :: adr_config(),
     max_datr :: 'undefined' | number(),
     dcycle_set :: integer(),
-    rxwin_set :: rxwin_config(), % requested
-    request_devstat :: boolean()}).
+    % requested
+    rxwin_set :: rxwin_config(),
+    request_devstat :: boolean()
+}).
 
 -record(device, {
     deveui :: eui(),
     profile :: nonempty_string(),
-    appargs :: any(), % application arguments
+    % application arguments
+    appargs :: any(),
     appeui :: eui(),
     appkey :: seckey(),
-    nwkkey=undefined :: 'undefined' | seckey(),
+    nwkkey = undefined :: 'undefined' | seckey(),
     desc :: 'undefined' | string(),
     last_joins :: [{calendar:datetime(), binary()}],
-    node :: devaddr()}).
+    node :: devaddr()
+}).
 
 -type devstat() :: {calendar:datetime(), integer(), integer(), integer()}.
 
 -record(node, {
     devaddr :: devaddr(),
     profile :: nonempty_string(),
-    appargs :: any(), % application arguments
+    % application arguments
+    appargs :: any(),
     nwkskey :: seckey(),
     appskey :: seckey(),
-    fnwksintkey=undefined :: 'undefined' | seckey(),
-    snwksintkey=undefined :: 'undefined' | seckey(),
-    nwksenckey=undefined :: 'undefined' | seckey(),
+    fnwksintkey = undefined :: 'undefined' | seckey(),
+    snwksintkey = undefined :: 'undefined' | seckey(),
+    nwksenckey = undefined :: 'undefined' | seckey(),
     desc :: 'undefined' | string(),
     location :: 'undefined' | string(),
-    fcntup :: 'undefined' | integer(), % last uplink fcnt
-    fcntdown :: integer(), % last downlink fcnt
+    % last uplink fcnt
+    fcntup :: 'undefined' | integer(),
+    % last downlink fcnt
+    fcntdown :: integer(),
     first_reset :: calendar:datetime(),
     last_reset :: calendar:datetime(),
-    reset_count :: integer(), % number of resets/joins
+    % number of resets/joins
+    reset_count :: integer(),
     last_rx :: 'undefined' | calendar:datetime(),
-    gateways :: [{binary(), #rxq{}}], % last seen gateways
-    adr_flag :: 0..1, % device supports
-    adr_set :: 'undefined' | adr_config(), % auto-calculated
-    adr_use :: adr_config(), % used
-    adr_failed=[] :: [binary()], % last request failed
+    % last seen gateways
+    gateways :: [{binary(), #rxq{}}],
+    % device supports
+    adr_flag :: 0..1,
+    % auto-calculated
+    adr_set :: 'undefined' | adr_config(),
+    % used
+    adr_use :: adr_config(),
+    % last request failed
+    adr_failed = [] :: [binary()],
     dcycle_use :: integer(),
-    rxwin_use :: rxwin_config(), % used
-    rxwin_failed=[] :: [binary()], % last request failed
-    last_qs :: [{integer(), integer()}], % list of {RSSI, SNR} tuples
-    average_qs :: 'undefined' | {number(), number()}, % average RSSI and SNR
+    % used
+    rxwin_use :: rxwin_config(),
+    % last request failed
+    rxwin_failed = [] :: [binary()],
+    % list of {RSSI, SNR} tuples
+    last_qs :: [{integer(), integer()}],
+    % average RSSI and SNR
+    average_qs :: 'undefined' | {number(), number()},
     devstat_time :: 'undefined' | calendar:datetime(),
     devstat_fcnt :: 'undefined' | integer(),
-    devstat :: [devstat()], % {time, battery, margin, max_snr}
+    % {time, battery, margin, max_snr}
+    devstat :: [devstat()],
     health_alerts :: [atom()],
     health_decay :: integer(),
     health_reported :: integer(),
-    health_next :: 'undefined' | calendar:datetime()}).
+    health_next :: 'undefined' | calendar:datetime()
+}).
 
 -record(ignored_node, {
     devaddr :: devaddr(),
-    mask :: devaddr()}).
+    mask :: devaddr()
+}).
 
 -record(connector, {
     connid :: binary(),
@@ -171,7 +212,7 @@
     subscribe :: 'undefined' | binary(),
     received :: 'undefined' | binary(),
     enabled :: boolean(),
-    failed=[] :: [binary()],
+    failed = [] :: [binary()],
     client_id :: 'undefined' | binary(),
     auth :: binary(),
     name :: 'undefined' | binary(),
@@ -181,9 +222,10 @@
     health_alerts :: [atom()],
     health_decay :: integer(),
     health_reported :: integer(),
-    health_next :: 'undefined' | calendar:datetime()}).
+    health_next :: 'undefined' | calendar:datetime()
+}).
 
--define(EMPTY_PATTERN, {<<>>,[]}).
+-define(EMPTY_PATTERN, {<<>>, []}).
 
 -record(handler, {
     app :: binary(),
@@ -193,42 +235,51 @@
     event_fields :: [binary()],
     parse_event :: 'undefined' | {binary, fun()},
     build :: 'undefined' | {binary(), fun()},
-    downlink_expires :: binary()}).
+    downlink_expires :: binary()
+}).
 
 -record(txdata, {
-    confirmed=false :: boolean(),
+    confirmed = false :: boolean(),
     port :: 'undefined' | integer(),
     data :: 'undefined' | binary(),
     pending :: 'undefined' | boolean(),
-    receipt :: any()}).
+    receipt :: any()
+}).
 
 -record(queued, {
-    frid :: frid(), % unique identifier
+    % unique identifier
+    frid :: frid(),
     datetime :: calendar:datetime(),
     devaddr :: devaddr(),
-    txdata :: #txdata{}}).
+    txdata :: #txdata{}
+}).
 
 -record(pending, {
     devaddr :: devaddr(),
     confirmed :: boolean(),
     phypayload :: binary(),
     sent_count :: integer(),
-    receipt :: any()}).
+    receipt :: any()
+}).
 
 -record(rxframe, {
-    frid :: frid(), % unique identifier
+    % unique identifier
+    frid :: frid(),
     dir :: binary(),
     network :: nonempty_string(),
     app :: binary(),
     devaddr :: devaddr(),
     location :: any(),
-    gateways :: [{binary(), #rxq{}}], % signal quality at each gateway
-    average_qs :: 'undefined' | {number(), number()}, % average RSSI and SNR
-    powe:: integer(),
+    % signal quality at each gateway
+    gateways :: [{binary(), #rxq{}}],
+    % average RSSI and SNR
+    average_qs :: 'undefined' | {number(), number()},
+    powe :: integer(),
     fcnt :: integer(),
     confirm :: boolean(),
     port :: integer(),
     data :: binary(),
-    datetime :: calendar:datetime()}).
+    datetime :: calendar:datetime()
+}).
 
 % end of file

@@ -18,41 +18,61 @@
 -record(state, {scopes, auth_fields}).
 
 init(Req, Scopes) ->
-    {cowboy_rest, Req, #state{scopes=Scopes}}.
+    {cowboy_rest, Req, #state{scopes = Scopes}}.
 
 allowed_methods(Req, State) ->
     {[<<"OPTIONS">>, <<"GET">>], Req, State}.
 
-is_authorized(Req, #state{scopes=Scopes}=State) ->
+is_authorized(Req, #state{scopes = Scopes} = State) ->
     case lorawan_admin:handle_authorization(Req, Scopes) of
         {true, AuthFields} ->
-            {true, Req, State#state{auth_fields=AuthFields}};
+            {true, Req, State#state{auth_fields = AuthFields}};
         Else ->
             {Else, Req, State}
     end.
 
-forbidden(Req, #state{auth_fields=AuthFields}=State) ->
+forbidden(Req, #state{auth_fields = AuthFields} = State) ->
     {lorawan_admin:fields_empty(AuthFields), Req, State}.
 
 content_types_provided(Req, State) ->
-    {[
-        {{<<"application">>, <<"javascript">>, []}, handle_get}
-    ], Req, State}.
+    {
+        [
+            {{<<"application">>, <<"javascript">>, []}, handle_get}
+        ],
+        Req,
+        State
+    }.
 
 handle_get(Req, State) ->
-    [#config{items_per_page=Items}] =
+    [#config{items_per_page = Items}] =
         mnesia:dirty_read(config, <<"main">>),
     {ok, TileServer} = application:get_env(bumblebee, map_tile_server),
-    {variable(<<"NodeName">>, atom_to_binary(node(), latin1),
-     variable(<<"MapTileServer">>, TileServer,
-        if
-            Items == undefined ->
-                variable(<<"ItemsPerPage">>, 30,
-                variable(<<"InfinitePagination">>, true, <<>>));
-            true ->
-                variable(<<"ItemsPerPage">>, Items,
-                variable(<<"InfinitePagination">>, false, <<>>))
-        end)), Req, State}.
+    {
+        variable(
+            <<"NodeName">>,
+            atom_to_binary(node(), latin1),
+            variable(
+                <<"MapTileServer">>,
+                TileServer,
+                if
+                    Items == undefined ->
+                        variable(
+                            <<"ItemsPerPage">>,
+                            30,
+                            variable(<<"InfinitePagination">>, true, <<>>)
+                        );
+                    true ->
+                        variable(
+                            <<"ItemsPerPage">>,
+                            Items,
+                            variable(<<"InfinitePagination">>, false, <<>>)
+                        )
+                end
+            )
+        ),
+        Req,
+        State
+    }.
 
 variable(Name, undefined, Bin) ->
     <<"var ", Name/binary, "=null;\r", Bin/binary>>;

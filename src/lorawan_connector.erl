@@ -12,10 +12,10 @@
 
 -include("lorawan_db.hrl").
 
-node_to_vars({_Profile, #node{devaddr=DevAddr, appargs=AppArgs}}) ->
-    #{devaddr=>DevAddr, appargs=>AppArgs};
-node_to_vars({_Profile, #device{appargs=AppArgs}, DevAddr}) ->
-    #{devaddr=>DevAddr, appargs=>AppArgs}.
+node_to_vars({_Profile, #node{devaddr = DevAddr, appargs = AppArgs}}) ->
+    #{devaddr => DevAddr, appargs => AppArgs};
+node_to_vars({_Profile, #device{appargs = AppArgs}, DevAddr}) ->
+    #{devaddr => DevAddr, appargs => AppArgs}.
 
 pid_to_binary(Pid) ->
     list_to_binary(pid_to_list(Pid)).
@@ -29,10 +29,11 @@ is_pattern(Pattern) ->
         _ -> true
     end.
 
-pattern_for_cowboy(Empty)
-        when Empty == undefined; Empty == <<>> ->
+pattern_for_cowboy(Empty) when
+    Empty == undefined; Empty == <<>>
+->
     undefined;
-pattern_for_cowboy(<<"/", _/binary>>=URI) ->
+pattern_for_cowboy(<<"/", _/binary>> = URI) ->
     % convert our pattern to cowboy pattern
     re:replace(URI, "{([^}]+)}", ":\\1", [{return, binary}]);
 pattern_for_cowboy(_Error) ->
@@ -42,23 +43,30 @@ pattern_for_cowboy(_Error) ->
 -spec prepare_filling('undefined' | binary() | [binary()]) -> fill_pattern_t() | [fill_pattern_t()].
 prepare_filling(List) when is_list(List) ->
     lists:map(
-        fun(Item) -> prepare_filling(Item) end, List);
+        fun(Item) -> prepare_filling(Item) end, List
+    );
 prepare_filling(undefined) ->
     ?EMPTY_PATTERN;
 prepare_filling(Pattern) ->
     case re:run(Pattern, "{[^}]+}", [global]) of
         {match, Match} ->
-            {Pattern,
-                [{binary_to_existing_atom(binary:part(Pattern, Start+1, Len-2), latin1), {Start, Len}}
-                    || [{Start, Len}] <- Match]};
+            {Pattern, [
+                {
+                    binary_to_existing_atom(binary:part(Pattern, Start + 1, Len - 2), latin1),
+                    {Start, Len}
+                }
+             || [{Start, Len}] <- Match
+            ]};
         nomatch ->
             {Pattern, []}
     end.
 
--spec fill_pattern(fill_pattern_t() | [fill_pattern_t()], map()) -> 'undefined' | binary() | [binary()].
+-spec fill_pattern(fill_pattern_t() | [fill_pattern_t()], map()) ->
+    'undefined' | binary() | [binary()].
 fill_pattern(List, Values) when is_list(List) ->
     lists:map(
-        fun(Item) -> fill_pattern(Item, Values) end, List);
+        fun(Item) -> fill_pattern(Item, Values) end, List
+    );
 fill_pattern(undefined, _) ->
     <<>>;
 fill_pattern({Pattern, []}, _) ->
@@ -73,7 +81,10 @@ fill_pattern({Pattern, Vars}, Values) ->
                     <<Prefix:Start/binary, _:Len/binary, Suffix/binary>> = Patt,
                     <<Prefix/binary, Val/binary, Suffix/binary>>
             end
-        end, Pattern, Vars).
+        end,
+        Pattern,
+        Vars
+    ).
 
 get_value(Var, Values) when is_map(Values) ->
     case maps:is_key(Var, Values) of
@@ -94,8 +105,12 @@ get_value(_Var, _Else) ->
 prepare_matching(undefined) ->
     ?EMPTY_PATTERN;
 prepare_matching(Pattern) ->
-    EPattern0 = binary:replace(Pattern, [<<".">>, <<"$">>, <<"+">>, <<"*">>],
-        <<"\\">>, [global, {insert_replaced, 1}]),
+    EPattern0 = binary:replace(
+        Pattern,
+        [<<".">>, <<"$">>, <<"+">>, <<"*">>],
+        <<"\\">>,
+        [global, {insert_replaced, 1}]
+    ),
     EPattern = binary:replace(EPattern0, <<"#">>, <<".*">>, [global]),
     case re:run(EPattern, "{[^}]+}", [global]) of
         {match, Match} ->
@@ -103,9 +118,15 @@ prepare_matching(Pattern) ->
                 fun([{Start, Len}], Patt) ->
                     <<Prefix:Start/binary, _:Len/binary, Suffix/binary>> = Patt,
                     <<Prefix/binary, "([a-zA-z0-9]*)", Suffix/binary>>
-                end, EPattern, Match),
+                end,
+                EPattern,
+                Match
+            ),
             {ok, MP} = re:compile(<<"^", Regex/binary, "$">>),
-            {MP, [binary_to_existing_atom(binary:part(EPattern, Start+1, Len-2), latin1) || [{Start, Len}] <- Match]};
+            {MP, [
+                binary_to_existing_atom(binary:part(EPattern, Start + 1, Len - 2), latin1)
+             || [{Start, Len}] <- Match
+            ]};
         nomatch ->
             {ok, MP} = re:compile(<<"^", EPattern/binary, "$">>),
             {MP, []}
@@ -154,30 +175,38 @@ same_common_vars0([{Key, Val} | Vars1], Vars2) ->
 
 shared_access_token(HostName, DeviceID, undefined, AccessKey) ->
     Res = lists:flatten(
-        io_lib:format("~s/devices/~s", [HostName, DeviceID])),
+        io_lib:format("~s/devices/~s", [HostName, DeviceID])
+    ),
     lists:flatten(
-        build_access_token(Res, AccessKey));
-
+        build_access_token(Res, AccessKey)
+    );
 shared_access_token(HostName, _DeviceID, KeyName, AccessKey) ->
     Res = lists:flatten(
-        io_lib:format("~s/devices", [HostName])),
+        io_lib:format("~s/devices", [HostName])
+    ),
     lists:flatten(
-        [build_access_token(Res, AccessKey), io_lib:format("&skn=~s", [KeyName])]).
+        [build_access_token(Res, AccessKey), io_lib:format("&skn=~s", [KeyName])]
+    ).
 
 build_access_token(Res0, AccessKey) ->
-    build_access_token(Res0, AccessKey, 60*60*24*7). % expires in a week
+    % expires in a week
+    build_access_token(Res0, AccessKey, 60 * 60 * 24 * 7).
 
 build_access_token(Res0, AccessKey, Expiry) ->
     Res = lorawan_compat:uri_encode(Res0),
     % seconds since the UNIX epoch
-    Now = calendar:datetime_to_gregorian_seconds(calendar:universal_time())
-     - calendar:datetime_to_gregorian_seconds({{1970,1,1}, {0,0,0}}),
+    Now =
+        calendar:datetime_to_gregorian_seconds(calendar:universal_time()) -
+            calendar:datetime_to_gregorian_seconds({{1970, 1, 1}, {0, 0, 0}}),
     ToSign = lists:flatten(
-        io_lib:format("~s~n~B", [Res, Now+Expiry])),
-    Sig = lorawan_compat:uri_encode(base64:encode_to_string(
-        lorawan_compat:hmac_sha256(base64:decode(AccessKey), ToSign))),
-    io_lib:format("SharedAccessSignature sr=~s&sig=~s&se=~B", [Res, Sig, Now+Expiry]).
-
+        io_lib:format("~s~n~B", [Res, Now + Expiry])
+    ),
+    Sig = lorawan_compat:uri_encode(
+        base64:encode_to_string(
+            lorawan_compat:hmac_sha256(base64:decode(AccessKey), ToSign)
+        )
+    ),
+    io_lib:format("SharedAccessSignature sr=~s&sig=~s&se=~B", [Res, Sig, Now + Expiry]).
 
 % content formatting
 
@@ -187,30 +216,40 @@ form_encode(Values) ->
             fun({Name, Value}) ->
                 {atom_to_binary(Name, latin1), value_to_binary(Value)}
             end,
-            maps:to_list(lorawan_admin:build(Values)))).
+            maps:to_list(lorawan_admin:build(Values))
+        )
+    ).
 
 value_to_binary(Term) when is_list(Term) -> list_to_binary(Term);
 value_to_binary(Term) when is_binary(Term) -> Term;
 value_to_binary(Term) -> list_to_binary(io_lib:print(Term)).
 
 -spec decode_and_downlink(#connector{}, binary(), map()) -> 'ok' | {'error', any()}.
-decode_and_downlink(#connector{app=App, format=Format}, Msg, Bindings) ->
+decode_and_downlink(#connector{app = App, format = Format}, Msg, Bindings) ->
     case decode(Format, Msg) of
         {ok, Vars} when is_map(Vars) ->
-            lorawan_application_backend:handle_downlink(App,
-                maps:merge(Bindings, Vars));
+            lorawan_application_backend:handle_downlink(
+                App,
+                maps:merge(Bindings, Vars)
+            );
         {ok, Vars} when is_list(Vars) ->
-            lorawan_application_backend:handle_downlink(App,
+            lorawan_application_backend:handle_downlink(
+                App,
                 lists:map(
-                    fun (Var) when is_map(Var) ->
+                    fun
+                        (Var) when is_map(Var) ->
                             maps:merge(Bindings, Var);
                         (Var) ->
                             Var
                     end,
-                    Vars));
+                    Vars
+                )
+            );
         {ok, Vars} ->
-            lorawan_application_backend:handle_downlink(App,
-                Vars);
+            lorawan_application_backend:handle_downlink(
+                App,
+                Vars
+            );
         Error ->
             Error
     end.
@@ -238,55 +277,81 @@ append_failed(ConnId, Error) ->
         fun() ->
             [Rec] = mnesia:read(connector, ConnId, write),
             lorawan_admin:write(append_failed0(Rec, atom_to_binary(Error, latin1)))
-        end).
+        end
+    ).
 
-append_failed0(#connector{failed=Failed}=Conn, Error) when is_list(Failed) ->
-    Conn#connector{failed=[Error|Failed]};
+append_failed0(#connector{failed = Failed} = Conn, Error) when is_list(Failed) ->
+    Conn#connector{failed = [Error | Failed]};
 append_failed0(Conn, Error) ->
-    Conn#connector{failed=[Error]}.
-
+    Conn#connector{failed = [Error]}.
 
 -include_lib("eunit/include/eunit.hrl").
 
 matchtst(undefined = Vars, Pattern, Topic) ->
-    [?_assertEqual(Vars, match_pattern(Topic, prepare_matching(Pattern))),
-    ?_assertEqual(Pattern, fill_pattern(prepare_filling(Pattern), #{}))];
+    [
+        ?_assertEqual(Vars, match_pattern(Topic, prepare_matching(Pattern))),
+        ?_assertEqual(Pattern, fill_pattern(prepare_filling(Pattern), #{}))
+    ];
 matchtst(Vars, Pattern, Topic) ->
-    [?_assertEqual(Vars, match_pattern(Topic, prepare_matching(Pattern))),
-    ?_assertEqual(Topic, fill_pattern(prepare_filling(Pattern), Vars))].
+    [
+        ?_assertEqual(Vars, match_pattern(Topic, prepare_matching(Pattern))),
+        ?_assertEqual(Topic, fill_pattern(prepare_filling(Pattern), Vars))
+    ].
 
-pattern_test_()-> [
-    matchtst(#{}, <<"normal/uri">>, <<"normal/uri">>),
-    matchtst(#{}, <<>>, <<>>),
-    matchtst(undefined, <<>>, <<"any/uri">>),
-    matchtst(undefined, <<"normal/uri">>, <<"another/uri">>),
-    matchtst(#{devaddr => <<"00112233">>}, <<"{devaddr}">>, <<"00112233">>),
-    matchtst(#{devaddr => <<"00112233">>}, <<"prefix.{devaddr}">>, <<"prefix.00112233">>),
-    matchtst(#{devaddr => <<"00112233">>}, <<"{devaddr}/suffix">>, <<"00112233/suffix">>),
-    matchtst(#{devaddr => <<"00112233">>}, <<"prefix:{devaddr}:suffix">>, <<"prefix:00112233:suffix">>),
-    matchtst(#{group => <<"test">>, devaddr => <<"00112233">>}, <<"{group}-{devaddr}">>, <<"test-00112233">>),
-    matchtst(#{a => <<"aaa">>, b => <<"b">>, c => <<"ccc">>, d => <<"d">>}, <<"{a}-{b}.{c}/{d}">>, <<"aaa-b.ccc/d">>),
-    ?_assertEqual(<<"{unknown}/00112233">>,
-        fill_pattern(prepare_filling(<<"{unknown}/{devaddr}">>), #{devaddr => <<"00112233">>})),
-    ?_assertEqual(#{devaddr => <<"00112233">>},
-        match_pattern(<<"00112233/trailing/data">>, prepare_matching(<<"{devaddr}/#">>))),
-    ?_assertEqual(#{devaddr => <<"00112233">>},
-        match_pattern(<<"/leading/data/00112233">>, prepare_matching(<<"#/{devaddr}">>))),
-    ?_assertEqual(#{}, match_pattern(<<"">>, prepare_matching(<<"#">>))),
-    ?_assertEqual(#{}, match_pattern(<<"any">>, prepare_matching(<<"#">>))),
-    ?_assertEqual(#{}, match_pattern(<<"/any">>, prepare_matching(<<"/#">>))),
-    ?_assertEqual(#{}, match_pattern(<<"any/">>, prepare_matching(<<"#/">>))),
-    ?_assertEqual(#{}, match_pattern(<<"$.+*">>, prepare_matching(<<"$.+*">>))),
-    ?_assertEqual(#{}, match_pattern(<<"$.+*">>, prepare_matching(<<"#">>))),
-    ?_assertEqual(<<"/without/template">>, pattern_for_cowboy(<<"/without/template">>)),
-    ?_assertEqual(<<"/some/:template">>, pattern_for_cowboy(<<"/some/{template}">>))].
+pattern_test_() ->
+    [
+        matchtst(#{}, <<"normal/uri">>, <<"normal/uri">>),
+        matchtst(#{}, <<>>, <<>>),
+        matchtst(undefined, <<>>, <<"any/uri">>),
+        matchtst(undefined, <<"normal/uri">>, <<"another/uri">>),
+        matchtst(#{devaddr => <<"00112233">>}, <<"{devaddr}">>, <<"00112233">>),
+        matchtst(#{devaddr => <<"00112233">>}, <<"prefix.{devaddr}">>, <<"prefix.00112233">>),
+        matchtst(#{devaddr => <<"00112233">>}, <<"{devaddr}/suffix">>, <<"00112233/suffix">>),
+        matchtst(
+            #{devaddr => <<"00112233">>},
+            <<"prefix:{devaddr}:suffix">>,
+            <<"prefix:00112233:suffix">>
+        ),
+        matchtst(
+            #{group => <<"test">>, devaddr => <<"00112233">>},
+            <<"{group}-{devaddr}">>,
+            <<"test-00112233">>
+        ),
+        matchtst(
+            #{a => <<"aaa">>, b => <<"b">>, c => <<"ccc">>, d => <<"d">>},
+            <<"{a}-{b}.{c}/{d}">>,
+            <<"aaa-b.ccc/d">>
+        ),
+        ?_assertEqual(
+            <<"{unknown}/00112233">>,
+            fill_pattern(prepare_filling(<<"{unknown}/{devaddr}">>), #{devaddr => <<"00112233">>})
+        ),
+        ?_assertEqual(
+            #{devaddr => <<"00112233">>},
+            match_pattern(<<"00112233/trailing/data">>, prepare_matching(<<"{devaddr}/#">>))
+        ),
+        ?_assertEqual(
+            #{devaddr => <<"00112233">>},
+            match_pattern(<<"/leading/data/00112233">>, prepare_matching(<<"#/{devaddr}">>))
+        ),
+        ?_assertEqual(#{}, match_pattern(<<"">>, prepare_matching(<<"#">>))),
+        ?_assertEqual(#{}, match_pattern(<<"any">>, prepare_matching(<<"#">>))),
+        ?_assertEqual(#{}, match_pattern(<<"/any">>, prepare_matching(<<"/#">>))),
+        ?_assertEqual(#{}, match_pattern(<<"any/">>, prepare_matching(<<"#/">>))),
+        ?_assertEqual(#{}, match_pattern(<<"$.+*">>, prepare_matching(<<"$.+*">>))),
+        ?_assertEqual(#{}, match_pattern(<<"$.+*">>, prepare_matching(<<"#">>))),
+        ?_assertEqual(<<"/without/template">>, pattern_for_cowboy(<<"/without/template">>)),
+        ?_assertEqual(<<"/some/:template">>, pattern_for_cowboy(<<"/some/{template}">>))
+    ].
 
-
-www_form_test_()-> [
-    ?_assertEqual(<<>>, form_encode(#{})),
-    ?_assertEqual(<<"one=1">>, form_encode(#{one=>1})),
-    ?_assertEqual(<<"one=1&two=val">>, form_encode(#{one=>1,two=>"val"})),
-    ?_assertEqual(<<"one=1&three=%26&two=val">>, form_encode(#{one=>1,two=>"val",three=><<"&">>}))
-].
+www_form_test_() ->
+    [
+        ?_assertEqual(<<>>, form_encode(#{})),
+        ?_assertEqual(<<"one=1">>, form_encode(#{one => 1})),
+        ?_assertEqual(<<"one=1&two=val">>, form_encode(#{one => 1, two => "val"})),
+        ?_assertEqual(
+            <<"one=1&three=%26&two=val">>, form_encode(#{one => 1, two => "val", three => <<"&">>})
+        )
+    ].
 
 % end of file

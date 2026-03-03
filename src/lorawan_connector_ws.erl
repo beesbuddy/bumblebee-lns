@@ -14,7 +14,9 @@
 
 -record(state, {conn, type, path, bindings}).
 
-start_connector(#connector{connid=Id, publish_uplinks=PubUp, publish_events=PubEv}=Connector) ->
+start_connector(
+    #connector{connid = Id, publish_uplinks = PubUp, publish_events = PubEv} = Connector
+) ->
     Routes =
         case lorawan_connector:pattern_for_cowboy(PubUp) of
             undefined ->
@@ -25,26 +27,28 @@ start_connector(#connector{connid=Id, publish_uplinks=PubUp, publish_events=PubE
             Pattern1 ->
                 [{Pattern1, ?MODULE, [Connector, uplink]}]
         end ++
-        case lorawan_connector:pattern_for_cowboy(PubEv) of
-            undefined ->
-                [];
-            error ->
-                lorawan_connector:raise_failed(Id, {badarg, PubEv}),
-                [];
-            Pattern2 ->
-                [{Pattern2, ?MODULE, [Connector, event]}]
-        end,
+            case lorawan_connector:pattern_for_cowboy(PubEv) of
+                undefined ->
+                    [];
+                error ->
+                    lorawan_connector:raise_failed(Id, {badarg, PubEv}),
+                    [];
+                Pattern2 ->
+                    [{Pattern2, ?MODULE, [Connector, event]}]
+            end,
     lorawan_http_registry:update({ws, Id}, #{routes => Routes}).
 
 stop_connector(Id) ->
     lorawan_http_registry:delete({ws, Id}).
 
-init(Req, [#connector{connid=Id}=Connector, Type]) ->
+init(Req, [#connector{connid = Id} = Connector, Type]) ->
     case authorize(Req, Connector) of
         {ok, Bindings} ->
             {ok, Timeout} = application:get_env(bumblebee, websocket_timeout),
             {cowboy_websocket, Req,
-                #state{conn=Connector, type=Type, path=cowboy_req:path(Req), bindings=Bindings},
+                #state{
+                    conn = Connector, type = Type, path = cowboy_req:path(Req), bindings = Bindings
+                },
                 #{idle_timeout => Timeout}};
         unauthorized ->
             lorawan_utils:throw_error({connector, Id}, unauthorized),
@@ -56,10 +60,11 @@ init(Req, [#connector{connid=Id}=Connector, Type]) ->
             {ok, Req2, undefined}
     end.
 
-authorize(Req, #connector{name=User})
-        when User == undefined; User == <<>> ->
+authorize(Req, #connector{name = User}) when
+    User == undefined; User == <<>>
+->
     validate(Req);
-authorize(Req, #connector{name=User, pass=Pass}) ->
+authorize(Req, #connector{name = User, pass = Pass}) ->
     case cowboy_req:parse_header(<<"authorization">>, Req) of
         {basic, User, Pass} ->
             validate(Req);
@@ -83,7 +88,7 @@ validate0([{Key, Value} | Other]) ->
         Else ->
             Else
     end;
-validate0([])->
+validate0([]) ->
     ok.
 
 validate_key(app, App) ->
@@ -101,15 +106,15 @@ validate_key(deveui, DevEUI) ->
             {error, {unknown_deveui, lorawan_utils:binary_to_hex(DevEUI)}}
     end;
 validate_key(devaddr, DevAddr) ->
-    V = fun(Key) -> 
+    V = fun(Key) ->
         case mnesia:dirty_read(multicast_channel, Key) of
-        [#multicast_channel{}] ->
-            ok;
-        _Else ->
-            {error, {unknown_devaddr, lorawan_utils:binary_to_hex(Key)}}
+            [#multicast_channel{}] ->
+                ok;
+            _Else ->
+                {error, {unknown_devaddr, lorawan_utils:binary_to_hex(Key)}}
         end
     end,
-    
+
     case mnesia:dirty_read(node, DevAddr) of
         [#node{}] ->
             ok;
@@ -117,9 +122,9 @@ validate_key(devaddr, DevAddr) ->
             V(DevAddr)
     end;
 validate_key(_Else, _) ->
-    ok.    
+    ok.
 
-websocket_init(#state{conn=#connector{connid=Id, app=App}, bindings=Bindings} = State) ->
+websocket_init(#state{conn = #connector{connid = Id, app = App}, bindings = Bindings} = State) ->
     _ = lager:debug("WebSocket connector ~p with ~p", [Id, Bindings]),
     ok = lorawan_compat:pg_join({backend, App}, self()),
     {ok, State}.
@@ -135,7 +140,7 @@ websocket_handle(Data, State) ->
     _ = lager:warning("Unknown handle ~w", [Data]),
     {ok, State}.
 
-handle_downlink(Msg, #state{conn=Connector, bindings=Bindings}=State) ->
+handle_downlink(Msg, #state{conn = Connector, bindings = Bindings} = State) ->
     case lorawan_connector:decode_and_downlink(Connector, Msg, Bindings) of
         ok ->
             ok;
@@ -149,33 +154,46 @@ handle_downlink(Msg, #state{conn=Connector, bindings=Bindings}=State) ->
 websocket_info(nodes_changed, State) ->
     % nothing to do here
     {ok, State};
-websocket_info({uplink, _Node, Vars0},
-        #state{conn=#connector{format=Format}, type=uplink, bindings=Bindings} = State) ->
+websocket_info(
+    {uplink, _Node, Vars0},
+    #state{conn = #connector{format = Format}, type = uplink, bindings = Bindings} = State
+) ->
     case lorawan_connector:same_common_vars(Vars0, Bindings) of
         true ->
             {reply, encode_uplink(Format, Vars0), State};
         false ->
             {ok, State}
     end;
-websocket_info({uplink, _Node, _Vars}, #state{type=event}=State) ->
+websocket_info({uplink, _Node, _Vars}, #state{type = event} = State) ->
     % this is not for me
     {ok, State};
-websocket_info({event, _Node, Vars0},
-        #state{type=event, bindings=Bindings} = State) ->
+websocket_info(
+    {event, _Node, Vars0},
+    #state{type = event, bindings = Bindings} = State
+) ->
     case lorawan_connector:same_common_vars(Vars0, Bindings) of
         true ->
-            {reply, {text,
-                jsx:encode(lorawan_admin:build(Vars0))}, State};
+            {reply, {text, jsx:encode(lorawan_admin:build(Vars0))}, State};
         false ->
             {ok, State}
     end;
-websocket_info({event, _Node, _Vars0}, #state{type=uplink}=State) ->
+websocket_info({event, _Node, _Vars0}, #state{type = uplink} = State) ->
     % this is not for me
     {ok, State};
-websocket_info({status, From}, #state{conn=#connector{connid=Id, app=App}, path=Uri}=State) ->
-    From ! {status, [
-        #{module => <<"ws">>, pid => lorawan_connector:pid_to_binary(self()),
-            connid => Id, app => App, uri => Uri, status => <<"connected">>}]},
+websocket_info(
+    {status, From}, #state{conn = #connector{connid = Id, app = App}, path = Uri} = State
+) ->
+    From !
+        {status, [
+            #{
+                module => <<"ws">>,
+                pid => lorawan_connector:pid_to_binary(self()),
+                connid => Id,
+                app => App,
+                uri => Uri,
+                status => <<"connected">>
+            }
+        ]},
     {ok, State};
 websocket_info(Info, State) ->
     _ = lager:warning("Unknown info ~p", [Info]),

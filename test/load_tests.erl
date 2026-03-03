@@ -34,12 +34,13 @@ load_test_() ->
             Gateways =
                 lists:map(
                     fun(ID) ->
-                        MAC = <<0,0,0,0,0,0,0,ID>>,
+                        MAC = <<0, 0, 0, 0, 0, 0, 0, ID>>,
                         test_admin:add_gateway(?AREA, MAC),
                         {ok, Gateway} = test_forwarder:start_link(MAC, test_env:gateway_server()),
                         {ID, Gateway}
                     end,
-                    lists:seq(1,?GW_COUNT)),
+                    lists:seq(1, ?GW_COUNT)
+                ),
             test_admin:add_network(?NET),
             test_admin:add_group(?NET, ?GROUP),
             test_admin:add_profile(?GROUP, ?PROF),
@@ -48,46 +49,57 @@ load_test_() ->
                     fun({ID1, Gateway}, Acc) ->
                         lists:foldl(
                             fun(ID2, Acc2) ->
-                                NodeCfg = {<<0,0,ID1,ID2>>, ?NWKSKEY, ?APPSKEY},
+                                NodeCfg = {<<0, 0, ID1, ID2>>, ?NWKSKEY, ?APPSKEY},
                                 test_admin:add_node(?PROF, NodeCfg),
                                 {ok, Node} = test_mote:start_link(NodeCfg, Gateway),
                                 [Node | Acc2]
                             end,
-                            Acc, lists:seq(1,?NODES_PER_GW))
+                            Acc,
+                            lists:seq(1, ?NODES_PER_GW)
+                        )
                     end,
-                    [], Gateways),
-            #state{gateways=Gateways, nodes=Nodes}
+                    [],
+                    Gateways
+                ),
+            #state{gateways = Gateways, nodes = Nodes}
         end,
-        fun(#state{gateways=Gateways, nodes=Nodes}) ->
+        fun(#state{gateways = Gateways, nodes = Nodes}) ->
             lists:foreach(
                 fun({_ID, Gateway}) ->
                     test_forwarder:stop(Gateway)
                 end,
-                Gateways),
+                Gateways
+            ),
             lists:foreach(
                 fun(Node) ->
                     test_mote:stop(Node)
                 end,
-                Nodes),
+                Nodes
+            ),
             application:stop(bumblebee),
             application:stop(mnesia)
         end,
         fun load_test/1}.
 
-load_test(#state{nodes=Nodes}) ->
+load_test(#state{nodes = Nodes}) ->
     {inparallel, 100,
         lists:map(
             fun(Node) ->
                 send_receive(Node, ?FRAMES_PER_NODE)
             end,
-            Nodes)}.
+            Nodes
+        )}.
 
 send_receive(Node, N) ->
     {inorder,
         lists:map(
             fun(Seq) ->
-                ?_assertEqual({ok, false, 2, <<((Seq+1) rem 2)>>}, test_mote:push_and_pull(Node, false, Seq, 2, test_mote:semtech_payload(Seq)))
+                ?_assertEqual(
+                    {ok, false, 2, <<((Seq + 1) rem 2)>>},
+                    test_mote:push_and_pull(Node, false, Seq, 2, test_mote:semtech_payload(Seq))
+                )
             end,
-            lists:seq(1, N))}.
+            lists:seq(1, N)
+        )}.
 
 % end of file

@@ -12,7 +12,7 @@ ifeq ($(REBAR3),)
 REBAR3 = $(CURDIR)/rebar3
 endif
 
-.PHONY: build upgrade clean distclean test release dist dpkg
+.PHONY: build upgrade clean distclean test release dist dpkg fmt fmt-check
 
 build: $(REBAR3)
 	@$(REBAR3) compile
@@ -30,6 +30,12 @@ clean: $(REBAR3)
 
 test: $(REBAR3)
 	@$(REBAR3) eunit
+
+fmt: $(REBAR3)
+	@ERL_AFLAGS="-enable-feature all" $(REBAR3) as format format
+
+fmt-check: $(REBAR3)
+	@ERL_AFLAGS="-enable-feature all" $(REBAR3) as format format --verify
 
 release: $(REBAR3)
 	@$(REBAR3) release

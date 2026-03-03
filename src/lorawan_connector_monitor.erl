@@ -21,27 +21,30 @@ start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 init([]) ->
-    Period = application:get_env(bumblebee, connector_monitor_period,
-            ?DEFAULT_PERIOD),
-    {ok, #state{period=Period}, Period}.
+    Period = application:get_env(
+        bumblebee,
+        connector_monitor_period,
+        ?DEFAULT_PERIOD
+    ),
+    {ok, #state{period = Period}, Period}.
 
 handle_call(_Request, _From, State) ->
     {stop, {error, unknownmsg}, State}.
 
-handle_cast(_Msg, #state{period=Period}=State) ->
+handle_cast(_Msg, #state{period = Period} = State) ->
     {noreply, State, Period}.
 
-handle_info(timeout, #state{period=Period}=State) ->
+handle_info(timeout, #state{period = Period} = State) ->
     % run through known connectors, attempt restart if failed with 'network'
     lists:foreach(
         fun(ConnId) ->
             [Connector] = mnesia:dirty_read(connector, ConnId),
             restart_connector(Connector)
         end,
-        mnesia:dirty_all_keys(connector)),
+        mnesia:dirty_all_keys(connector)
+    ),
     {noreply, State, Period};
-
-handle_info(Info, #state{period=Period}=State) ->
+handle_info(Info, #state{period = Period} = State) ->
     lager:debug("unknown info ~p", [Info]),
     {noreply, State, Period}.
 
@@ -51,10 +54,11 @@ terminate(_Reason, _State) ->
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
-restart_connector(#connector{enabled=true, failed=[<<"network">>]}=Connector) ->
+restart_connector(#connector{enabled = true, failed = [<<"network">>]} = Connector) ->
     {atomic, ok} = mnesia:transaction(
         fun() ->
-            lorawan_admin:write(Connector#connector{failed=[]})
-        end);
+            lorawan_admin:write(Connector#connector{failed = []})
+        end
+    );
 restart_connector(_Connector) ->
     ok.

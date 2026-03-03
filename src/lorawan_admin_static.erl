@@ -39,7 +39,7 @@ priv_dir(App) ->
     end.
 
 init_rest(Req, Path0, Scopes) ->
-    {cowboy_rest, Req, #state{file=file_info(Req, Path0), scopes=Scopes}}.
+    {cowboy_rest, Req, #state{file = file_info(Req, Path0), scopes = Scopes}}.
 
 file_info(Req, Path0) ->
     Path = filename:absname(filename:join(Path0)),
@@ -61,7 +61,7 @@ gzip_accepted(Req) ->
         undefined ->
             false;
         Encodings ->
-            case [E || E={<<"gzip">>, Q} <- Encodings, Q =/= 0] of
+            case [E || E = {<<"gzip">>, Q} <- Encodings, Q =/= 0] of
                 [] ->
                     false;
                 _ ->
@@ -75,57 +75,61 @@ file_info_plain(Path) ->
         Error -> Error
     end.
 
-is_authorized(Req, #state{scopes=Scopes}=State) ->
+is_authorized(Req, #state{scopes = Scopes} = State) ->
     case proplists:get_value(<<"anonymous">>, Scopes) of
         undefined ->
             case lorawan_admin:handle_authorization(Req, Scopes) of
                 {true, AuthFields} ->
-                    {true, Req, State#state{auth_fields=AuthFields}};
+                    {true, Req, State#state{auth_fields = AuthFields}};
                 Else ->
                     {Else, Req, State}
             end;
         AnonFields ->
-            {true, Req, State#state{auth_fields=AnonFields}}
+            {true, Req, State#state{auth_fields = AnonFields}}
     end.
 
-malformed_request(Req, #state{file=Info}=State) ->
+malformed_request(Req, #state{file = Info} = State) ->
     {Info =:= error, Req, State}.
 
-forbidden(Req, #state{auth_fields=[]}=State) ->
+forbidden(Req, #state{auth_fields = []} = State) ->
     {true, Req, State};
-forbidden(Req, #state{file={error, _}}=State) ->
+forbidden(Req, #state{file = {error, _}} = State) ->
     {true, Req, State};
-forbidden(Req, #state{file={_, #file_info{type=directory}, _}}=State) ->
+forbidden(Req, #state{file = {_, #file_info{type = directory}, _}} = State) ->
     {true, Req, State};
-forbidden(Req, #state{file={_, #file_info{access=Access}, _}}=State)
-        when Access =:= write; Access =:= none ->
+forbidden(Req, #state{file = {_, #file_info{access = Access}, _}} = State) when
+    Access =:= write; Access =:= none
+->
     {true, Req, State};
 forbidden(Req, State) ->
     {false, Req, State}.
 
-content_types_provided(Req, #state{file={Path, _, _}}=State) ->
+content_types_provided(Req, #state{file = {Path, _, _}} = State) ->
     {[{cow_mimetypes:web(Path), get_file}], Req, State}.
 
-resource_exists(Req, #state{file={_, #file_info{type=regular}, _}}=State) ->
+resource_exists(Req, #state{file = {_, #file_info{type = regular}, _}} = State) ->
     {true, Req, State};
 resource_exists(Req, State) ->
     {false, Req, State}.
 
-generate_etag(Req, #state{file={_, #file_info{size=Size, mtime=Mtime}, _}}=State) ->
+generate_etag(Req, #state{file = {_, #file_info{size = Size, mtime = Mtime}, _}} = State) ->
     {generate_default_etag(Size, Mtime), Req, State}.
 
 generate_default_etag(Size, Mtime) ->
     {strong, integer_to_binary(erlang:phash2({Size, Mtime}, 16#ffffffff))}.
 
-last_modified(Req, #state{file={_, #file_info{mtime=Modified}, _}}=State) ->
+last_modified(Req, #state{file = {_, #file_info{mtime = Modified}, _}} = State) ->
     {Modified, Req, State}.
 
-get_file(Req, #state{file={Path, #file_info{size=Size}, Compressed}}=State) ->
+get_file(Req, #state{file = {Path, #file_info{size = Size}, Compressed}} = State) ->
     Req2 =
         case Compressed of
             {Type, Subtype, []} ->
-                cowboy_req:set_resp_header(<<"content-type">>, <<Type/binary, $/, Subtype/binary>>,
-                    cowboy_req:set_resp_header(<<"content-encoding">>, <<"gzip">>, Req));
+                cowboy_req:set_resp_header(
+                    <<"content-type">>,
+                    <<Type/binary, $/, Subtype/binary>>,
+                    cowboy_req:set_resp_header(<<"content-encoding">>, <<"gzip">>, Req)
+                );
             undefined ->
                 Req
         end,

@@ -14,3 +14,17 @@ so be please ready to spend your time too:
 Be respectful to the maintainers and other contributors. Open source contributors
 put long hours into developing projects and doing user support. Those projects
 and user support are available for free. We believe this deserves some respect.
+
+## Development Workflow
+
+Before sending changes, format Erlang sources with:
+
+```bash
+make fmt
+```
+
+To verify formatting in CI/local checks:
+
+```bash
+make fmt-check
+```

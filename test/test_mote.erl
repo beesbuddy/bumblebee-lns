@@ -25,13 +25,19 @@ push_and_pull(Mote, Conf, FCnt, FPort, FData) ->
     Mote ! {self(), Conf, FCnt, FPort, FData},
     receive
         Response -> Response
-        after 2000 -> {error, timeout}
+    after 2000 -> {error, timeout}
     end.
 
 init([DevCfg, Gateway]) ->
     {DevAddr, NwkSKey, AppSKey} = get_config(DevCfg),
-    {ok, #state{devaddr=DevAddr, nwkskey=NwkSKey, appskey=AppSKey, gateway=Gateway,
-        client=undefined, send_status=false}}.
+    {ok, #state{
+        devaddr = DevAddr,
+        nwkskey = NwkSKey,
+        appskey = AppSKey,
+        gateway = Gateway,
+        client = undefined,
+        send_status = false
+    }}.
 
 get_config({DevAddr, NwkSKey, AppSKey}) ->
     {DevAddr, lorawan_utils:hex_to_binary(NwkSKey), lorawan_utils:hex_to_binary(AppSKey)}.
@@ -42,7 +48,7 @@ handle_call(_Request, _From, State) ->
 handle_cast(_Request, State) ->
     {noreply, State}.
 
-handle_info({From, Conf, FCnt, FPort, FData}, #state{gateway=Gateway}=State) ->
+handle_info({From, Conf, FCnt, FPort, FData}, #state{gateway = Gateway} = State) ->
     MType =
         case Conf of
             false -> 2#010;
@@ -50,9 +56,8 @@ handle_info({From, Conf, FCnt, FPort, FData}, #state{gateway=Gateway}=State) ->
         end,
     Req = encode_frame(MType, FCnt, 0, 0, 0, <<>>, FPort, FData, State),
     Gateway ! {uplink, self(), test_forwarder:rxpk(base64:encode(Req))},
-    {noreply, State#state{client=From}};
-
-handle_info({ok, Resp64}, #state{client=Client}=State) ->
+    {noreply, State#state{client = From}};
+handle_info({ok, Resp64}, #state{client = Client} = State) ->
     {Reply, State2} = process_frame(base64:decode(Resp64), State),
     Client ! Reply,
     {noreply, State2}.
@@ -63,44 +68,70 @@ terminate(_Reason, _State) ->
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
-
 semtech_payload(LED) ->
     <<LED, 0:16, 0:16, 0:16, 0, 0:24, 0:24, 0:16>>.
 
-encode_frame(MType, FCnt, ADR, ADRACKReq, ACK, FOpts, FPort, FData,
-        #state{devaddr=DevAddr, nwkskey=NwkSKey, appskey=AppSKey}) ->
-    FHDR = <<(reverse(DevAddr)):4/binary, ADR:1, ADRACKReq:1, ACK:1, 0:1, (byte_size(FOpts)):4,
-        FCnt:16/little-unsigned-integer, FOpts/binary>>,
-    MACPayload = case FPort of
-        undefined ->
-            <<FHDR/binary>>;
-        0 ->
-            FRMPayload = cipher(FData, NwkSKey, MType band 1, DevAddr, FCnt),
-            <<FHDR/binary, 0:8, (reverse(FRMPayload))/binary>>;
-        Num when Num > 0 ->
-            FRMPayload = cipher(FData, AppSKey, MType band 1, DevAddr, FCnt),
-            <<FHDR/binary, FPort:8, (reverse(FRMPayload))/binary>>
-    end,
+encode_frame(
+    MType,
+    FCnt,
+    ADR,
+    ADRACKReq,
+    ACK,
+    FOpts,
+    FPort,
+    FData,
+    #state{devaddr = DevAddr, nwkskey = NwkSKey, appskey = AppSKey}
+) ->
+    FHDR = <<
+        (reverse(DevAddr)):4/binary,
+        ADR:1,
+        ADRACKReq:1,
+        ACK:1,
+        0:1,
+        (byte_size(FOpts)):4,
+        FCnt:16/little-unsigned-integer,
+        FOpts/binary
+    >>,
+    MACPayload =
+        case FPort of
+            undefined ->
+                <<FHDR/binary>>;
+            0 ->
+                FRMPayload = cipher(FData, NwkSKey, MType band 1, DevAddr, FCnt),
+                <<FHDR/binary, 0:8, (reverse(FRMPayload))/binary>>;
+            Num when Num > 0 ->
+                FRMPayload = cipher(FData, AppSKey, MType band 1, DevAddr, FCnt),
+                <<FHDR/binary, FPort:8, (reverse(FRMPayload))/binary>>
+        end,
     Msg = <<MType:3, 0:3, 0:2, MACPayload/binary>>,
-    MIC = lorawan_compat:cmac_n(NwkSKey, <<(b0(MType band 1, DevAddr, FCnt, byte_size(Msg)))/binary, Msg/binary>>, 4),
+    MIC = lorawan_compat:cmac_n(
+        NwkSKey, <<(b0(MType band 1, DevAddr, FCnt, byte_size(Msg)))/binary, Msg/binary>>, 4
+    ),
     <<Msg/binary, MIC/binary>>.
 
 process_frame(PHYPayload, State) ->
-    Size = byte_size(PHYPayload)-4,
+    Size = byte_size(PHYPayload) - 4,
     <<Msg:Size/binary, MIC:4/binary>> = PHYPayload,
     <<MType:3, _:5, _/binary>> = Msg,
     process_frame0(MType, Msg, MIC, State).
 
-process_frame0(MType, Msg, MIC, #state{devaddr=DevAddr, nwkskey=NwkSKey, appskey=AppSKey}=State) ->
+process_frame0(
+    MType, Msg, MIC, #state{devaddr = DevAddr, nwkskey = NwkSKey, appskey = AppSKey} = State
+) ->
     <<_, MACPayload/binary>> = Msg,
     <<DevAddr0:4/binary, ADR:1, _RFU:1, ACK:1, Pending:1, FOptsLen:4,
         FCnt:16/little-unsigned-integer, FOpts:FOptsLen/binary, Body/binary>> = MACPayload,
-    {FPort, FRMPayload} = case Body of
-        <<>> -> {undefined, <<>>};
-        <<Port:8, Payload/binary>> -> {Port, Payload}
-    end,
+    {FPort, FRMPayload} =
+        case Body of
+            <<>> -> {undefined, <<>>};
+            <<Port:8, Payload/binary>> -> {Port, Payload}
+        end,
     DevAddr = reverse(DevAddr0),
-    case lorawan_compat:cmac_n(NwkSKey, <<(b0(MType band 1, DevAddr, FCnt, byte_size(Msg)))/binary, Msg/binary>>, 4) of
+    case
+        lorawan_compat:cmac_n(
+            NwkSKey, <<(b0(MType band 1, DevAddr, FCnt, byte_size(Msg)))/binary, Msg/binary>>, 4
+        )
+    of
         MIC ->
             case FPort of
                 0 when FOptsLen == 0 ->
@@ -111,9 +142,10 @@ process_frame0(MType, Msg, MIC, #state{devaddr=DevAddr, nwkskey=NwkSKey, appskey
                 _N ->
                     State2 =
                         lists:foldl(
-                            fun (dev_status_req, S) -> S#state{send_status=true}
-                            end,
-                            State, parse_fopts(FOpts)),
+                            fun(dev_status_req, S) -> S#state{send_status = true} end,
+                            State,
+                            parse_fopts(FOpts)
+                        ),
                     Data = cipher(FRMPayload, AppSKey, MType band 1, DevAddr, FCnt),
                     {{ok, bit_to_bool(ACK), FPort, reverse(Data)}, State2}
             end;
@@ -126,11 +158,17 @@ bit_to_bool(1) -> true.
 
 parse_fopts(<<16#02, Margin, GwCnt, Rest/binary>>) ->
     [{link_check_ans, Margin, GwCnt} | parse_fopts(Rest)];
-parse_fopts(<<16#03, DataRate:4, TXPower:4, ChMask:16/little-unsigned-integer, _RFU:1, ChMaskCntl:3, NbRep:4, Rest/binary>>) ->
+parse_fopts(
+    <<16#03, DataRate:4, TXPower:4, ChMask:16/little-unsigned-integer, _RFU:1, ChMaskCntl:3,
+        NbRep:4, Rest/binary>>
+) ->
     [{link_adr_req, DataRate, TXPower, ChMask, ChMaskCntl, NbRep} | parse_fopts(Rest)];
 parse_fopts(<<16#04, MaxDCycle, Rest/binary>>) ->
     [{duty_cycle_req, MaxDCycle} | parse_fopts(Rest)];
-parse_fopts(<<16#05, _RFU:1, RX1DROffset:3, RX2DataRate:4, Frequency:24/little-unsigned-integer, Rest/binary>>) ->
+parse_fopts(
+    <<16#05, _RFU:1, RX1DROffset:3, RX2DataRate:4, Frequency:24/little-unsigned-integer,
+        Rest/binary>>
+) ->
     [{rx_param_setup_req, RX1DROffset, RX2DataRate, Frequency} | parse_fopts(Rest)];
 parse_fopts(<<16#06, Rest/binary>>) ->
     [dev_status_req | parse_fopts(Rest)];

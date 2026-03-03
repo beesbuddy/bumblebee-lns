@@ -15,22 +15,23 @@ start_link() ->
 
 init([]) ->
     lorawan_utils:throw_info({server, node()}, started, unique),
-    {ok, {{one_for_one, 2, 10}, [
-        {db_guard,
-            {lorawan_db_guard, start_link, []},
-            permanent, 5000, worker, [lorawan_db_guard]},
-        {gateways,
-            {lorawan_gw_sup, start_link, []},
-            permanent, infinity, supervisor, [lorawan_gw_sup]},
-        {http_registry,
-            {lorawan_http_registry, start_link, []},
-            permanent, 5000, worker, [lorawan_http_registry]},
-        {prometheus,
-            {lorawan_prometheus, start_link, []},
-            permanent, 5000, worker, [lorawan_prometheus]},
-        {backends,
-            {lorawan_backend_sup, start_link, []},
-            permanent, infinity, supervisor, [lorawan_backend_sup]}
-    ]}}.
+    {ok,
+        {{one_for_one, 2, 10}, [
+            {db_guard, {lorawan_db_guard, start_link, []}, permanent, 5000, worker, [
+                lorawan_db_guard
+            ]},
+            {gateways, {lorawan_gw_sup, start_link, []}, permanent, infinity, supervisor, [
+                lorawan_gw_sup
+            ]},
+            {http_registry, {lorawan_http_registry, start_link, []}, permanent, 5000, worker, [
+                lorawan_http_registry
+            ]},
+            {prometheus, {lorawan_prometheus, start_link, []}, permanent, 5000, worker, [
+                lorawan_prometheus
+            ]},
+            {backends, {lorawan_backend_sup, start_link, []}, permanent, infinity, supervisor, [
+                lorawan_backend_sup
+            ]}
+        ]}}.
 
 % end of file

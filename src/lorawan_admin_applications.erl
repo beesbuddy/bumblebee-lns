@@ -20,42 +20,48 @@
 
 init(Req, Scopes) ->
     Name = cowboy_req:binding(name, Req),
-    {cowboy_rest, Req, #state{name=Name, scopes=Scopes}}.
+    {cowboy_rest, Req, #state{name = Name, scopes = Scopes}}.
 
 allowed_methods(Req, State) ->
     {[<<"OPTIONS">>, <<"GET">>], Req, State}.
 
-is_authorized(Req, #state{scopes=Scopes}=State) ->
+is_authorized(Req, #state{scopes = Scopes} = State) ->
     case lorawan_admin:handle_authorization(Req, Scopes) of
         {true, AuthFields} ->
-            {true, Req, State#state{auth_fields=AuthFields}};
+            {true, Req, State#state{auth_fields = AuthFields}};
         Else ->
             {Else, Req, State}
     end.
 
-forbidden(Req, #state{auth_fields=AuthFields}=State) ->
+forbidden(Req, #state{auth_fields = AuthFields} = State) ->
     {lorawan_admin:fields_empty(AuthFields), Req, State}.
 
 content_types_provided(Req, State) ->
-    {[
-        {{<<"application">>, <<"json">>, []}, handle_get}
-    ], Req, State}.
+    {
+        [
+            {{<<"application">>, <<"json">>, []}, handle_get}
+        ],
+        Req,
+        State
+    }.
 
-handle_get(Req, #state{name=undefined}=State) ->
+handle_get(Req, #state{name = undefined} = State) ->
     {ok, Modules} = application:get_env(bumblebee, applications),
     A = lists:map(
-            fun({Name, _Module}) -> [{name, Name}] end,
-            Modules),
+        fun({Name, _Module}) -> [{name, Name}] end,
+        Modules
+    ),
     B = lists:map(
-            fun(Name) -> [{name, Name}] end,
-            mnesia:dirty_all_keys(handler)),
-    {jsx:encode(A++B), Req, State};
-handle_get(Req, #state{name=Name}=State) ->
+        fun(Name) -> [{name, Name}] end,
+        mnesia:dirty_all_keys(handler)
+    ),
+    {jsx:encode(A ++ B), Req, State};
+handle_get(Req, #state{name = Name} = State) ->
     {jsx:encode([{name, Name}]), Req, State}.
 
-resource_exists(Req, #state{name=undefined}=State) ->
+resource_exists(Req, #state{name = undefined} = State) ->
     {true, Req, State};
-resource_exists(Req, #state{name=Name}=State) ->
+resource_exists(Req, #state{name = Name} = State) ->
     {ok, Modules} = application:get_env(bumblebee, applications),
     case proplists:is_defined(Name, Modules) of
         true ->

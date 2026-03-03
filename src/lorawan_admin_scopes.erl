@@ -18,32 +18,36 @@
 
 init(Req, Scopes) ->
     Name = cowboy_req:binding(name, Req),
-    {cowboy_rest, Req, #state{name=Name, scopes=Scopes}}.
+    {cowboy_rest, Req, #state{name = Name, scopes = Scopes}}.
 
 allowed_methods(Req, State) ->
     {[<<"OPTIONS">>, <<"GET">>], Req, State}.
 
-is_authorized(Req, #state{scopes=Scopes}=State) ->
+is_authorized(Req, #state{scopes = Scopes} = State) ->
     case lorawan_admin:handle_authorization(Req, Scopes) of
         {true, AuthFields} ->
-            {true, Req, State#state{auth_fields=AuthFields}};
+            {true, Req, State#state{auth_fields = AuthFields}};
         Else ->
             {Else, Req, State}
     end.
 
-forbidden(Req, #state{auth_fields=AuthFields}=State) ->
+forbidden(Req, #state{auth_fields = AuthFields} = State) ->
     {lorawan_admin:fields_empty(AuthFields), Req, State}.
 
 content_types_provided(Req, State) ->
-    {[
-        {{<<"application">>, <<"json">>, []}, handle_get}
-    ], Req, State}.
+    {
+        [
+            {{<<"application">>, <<"json">>, []}, handle_get}
+        ],
+        Req,
+        State
+    }.
 
-handle_get(Req, #state{name=undefined}=State) ->
+handle_get(Req, #state{name = undefined} = State) ->
     Scopes = lorawan_http_registry:get(scopes),
     Req2 = cowboy_req:set_resp_header(<<"x-total-count">>, integer_to_binary(length(Scopes)), Req),
     {jsx:encode([[{id, S}, {name, S}] || S <- Scopes]), Req2, State};
-handle_get(Req, #state{name=Name}=State) ->
+handle_get(Req, #state{name = Name} = State) ->
     {jsx:encode([{name, Name}]), Req, State}.
 
 % end of file

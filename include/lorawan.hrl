@@ -6,25 +6,44 @@
 %
 
 -record(stat, {
-    time, lati, long, alti, rxnb, rxok, rxfw, ackr, dwnb, txnb,
-    mail, desc % TTN extensions
+    time,
+    lati,
+    long,
+    alti,
+    rxnb,
+    rxok,
+    rxfw,
+    ackr,
+    dwnb,
+    txnb,
+    % TTN extensions
+    mail,
+    desc
 }).
 
 -record(frame, {conf, devaddr, adr, adr_ack_req, ack, fcnt, fopts, port, data}).
 
 -define(to_record(Record, Object, Default),
-    list_to_tuple([Record|[maps:get(X, Object, Default) || X <- record_info(fields, Record)]])).
+    list_to_tuple([Record | [maps:get(X, Object, Default) || X <- record_info(fields, Record)]])
+).
 
 -define(to_record(Record, Object), ?to_record(Record, Object, undefined)).
 
 -define(to_map(Record, RecData),
     maps:from_list(
         lists:filtermap(
-            fun ({_K, D, D}) -> false;
+            fun
+                ({_K, D, D}) -> false;
                 ({K, V, _D}) -> {true, {K, V}}
             end,
-            lists:zip3(record_info(fields, Record), lorawan_db:record_fields(RecData), tl(tuple_to_list(#Record{})))
-    ))).
+            lists:zip3(
+                record_info(fields, Record),
+                lorawan_db:record_fields(RecData),
+                tl(tuple_to_list(#Record{}))
+            )
+        )
+    )
+).
 
 -define(REALM, <<"bumblebee">>).
 
@@ -37,18 +56,21 @@
     email_from :: 'undefined' | string(),
     email_server :: 'undefined' | string(),
     email_user :: 'undefined' | string(),
-    email_password :: 'undefined' | string()}).
+    email_password :: 'undefined' | string()
+}).
 
 -record(user, {
     name :: nonempty_string(),
     pass_ha1 :: string(),
     scopes :: [string()],
     email :: string(),
-    send_alerts :: boolean()}).
+    send_alerts :: boolean()
+}).
 
 -record(server, {
     sname :: atom(),
-    router_perf :: [{calendar:datetime(), {integer(), integer()}}]}).
+    router_perf :: [{calendar:datetime(), {integer(), integer()}}]
+}).
 
 -record(event, {
     evid :: binary(),
@@ -59,6 +81,7 @@
     entity :: atom(),
     eid :: binary(),
     text :: binary(),
-    args :: 'undefined' | binary()}).
+    args :: 'undefined' | binary()
+}).
 
 % end of file

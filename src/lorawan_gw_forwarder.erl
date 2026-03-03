@@ -26,7 +26,7 @@ init([PktFwdOpts]) ->
     % The port in the options takes precedence over the one in the first argument.
     case gen_udp:open(0, [binary | PktFwdOpts]) of
         {ok, Socket} ->
-            {ok, #state{sock=Socket, tokens=maps:new()}};
+            {ok, #state{sock = Socket, tokens = maps:new()}};
         {error, Reason} ->
             lager:error("Failed to start the packet_forwarder interface: ~p", [Reason]),
             {stop, Reason}
@@ -39,7 +39,10 @@ handle_cast(_Request, State) ->
     {stop, State}.
 
 % PUSH DATA
-handle_info({udp, Socket, Host, Port, <<Version, Token:16, 0, MAC:8/binary, Data/binary>>}, #state{sock=Socket}=State) ->
+handle_info(
+    {udp, Socket, Host, Port, <<Version, Token:16, 0, MAC:8/binary, Data/binary>>},
+    #state{sock = Socket} = State
+) ->
     % PUSH ACK
     ok = gen_udp:send(Socket, Host, Port, <<Version, Token:16, 1>>),
     % process packets after ack
@@ -47,36 +50,41 @@ handle_info({udp, Socket, Host, Port, <<Version, Token:16, 0, MAC:8/binary, Data
         Data2 when is_map(Data2) ->
             % lager:debug("---> ~p", [Data2]),
             lists:foreach(
-                fun ({rxpk, Pk}) -> rxpk(MAC, Pk);
+                fun
+                    ({rxpk, Pk}) -> rxpk(MAC, Pk);
                     ({stat, Pk}) -> status(MAC, Pk);
                     % ignore non-standard ideetron/lorank extensions
                     % https://github.com/Ideetron/packet_forwarder/blob/master/poly_pkt_fwd/src/poly_pkt_fwd.c#L2085
                     ({time, _Time}) -> ok;
-                    (Else) ->
-                        lager:warning("Unknown element in JSON: ~p", [Else])
+                    (Else) -> lager:warning("Unknown element in JSON: ~p", [Else])
                 end,
-                maps:to_list(Data2));
+                maps:to_list(Data2)
+            );
         _ ->
-            lager:error("Ignored PUSH_DATA from ~s: JSON syntax error: ~s", [lorawan_utils:binary_to_hex(MAC), Data])
+            lager:error("Ignored PUSH_DATA from ~s: JSON syntax error: ~s", [
+                lorawan_utils:binary_to_hex(MAC), Data
+            ])
     end,
     {noreply, State};
-
 % PULL DATA
-handle_info({udp, Socket, Host, Port, <<Version, Token:16, 2, MAC:8/binary>>}, #state{sock=Socket}=State) ->
+handle_info(
+    {udp, Socket, Host, Port, <<Version, Token:16, 2, MAC:8/binary>>}, #state{sock = Socket} = State
+) ->
     % PULL ACK
     ok = gen_udp:send(Socket, Host, Port, <<Version, Token:16, 4>>),
     lorawan_gw_router:alive(MAC, ?MODULE, {Host, Port, Version}),
     {noreply, State};
-
 % TX ACK
-handle_info({udp, Socket, _Host, _Port, <<_Version, Token:16, 5, MAC:8/binary, Data/binary>>},
-        #state{sock=Socket, tokens=Tokens}=State) ->
+handle_info(
+    {udp, Socket, _Host, _Port, <<_Version, Token:16, 5, MAC:8/binary, Data/binary>>},
+    #state{sock = Socket, tokens = Tokens} = State
+) ->
     {DevAddr, Tokens2} =
         case maps:take(Token, Tokens) of
             {{Timer, AState, DStamp}, Tkns} ->
                 AStamp = erlang:monotonic_time(milli_seconds),
                 {ok, cancel} = timer:cancel(Timer),
-                lorawan_gw_router:network_delay(MAC, AStamp-DStamp),
+                lorawan_gw_router:network_delay(MAC, AStamp - DStamp),
                 {AState, Tkns};
             error ->
                 {undefined, Tokens}
@@ -90,25 +98,32 @@ handle_info({udp, Socket, _Host, _Port, <<_Version, Token:16, 5, MAC:8/binary, D
                 Data2 when is_map(Data2) ->
                     Ack = maps:get(txpk_ack, Data2),
                     case maps:get(error, Ack, undefined) of
-                        undefined -> ok;
-                        <<"NONE">> -> ok;
+                        undefined ->
+                            ok;
+                        <<"NONE">> ->
+                            ok;
                         Error ->
-                            lorawan_gw_router:downlink_error(MAC, DevAddr,
-                                string:lowercase(Error))
+                            lorawan_gw_router:downlink_error(
+                                MAC,
+                                DevAddr,
+                                string:lowercase(Error)
+                            )
                     end;
                 _ ->
-                    lager:error("Ignored TX_ACK from ~s: JSON syntax error: ~s", [lorawan_utils:binary_to_hex(MAC), Data])
+                    lager:error("Ignored TX_ACK from ~s: JSON syntax error: ~s", [
+                        lorawan_utils:binary_to_hex(MAC), Data
+                    ])
             end
     end,
-    {noreply, State#state{tokens=Tokens2}};
-
+    {noreply, State#state{tokens = Tokens2}};
 % something strange
 handle_info({udp, _Socket, Host, Port, Msg}, State) ->
     lager:warning("Weird data from ~s:~p: ~w", [inet:ntoa(Host), Port, Msg]),
     {noreply, State};
-
-handle_info({send, {Host, Port, Version}, GWState, DevAddr, TxQ, RFCh, PHYPayload},
-        #state{sock=Socket, tokens=Tokens}=State) ->
+handle_info(
+    {send, {Host, Port, Version}, GWState, DevAddr, TxQ, RFCh, PHYPayload},
+    #state{sock = Socket, tokens = Tokens} = State
+) ->
     Pk = [{txpk, build_txpk(TxQ, GWState, RFCh, PHYPayload)}],
     % lager:debug("<--- ~p", [Pk]),
     <<Token:16>> = crypto:strong_rand_bytes(2),
@@ -116,12 +131,11 @@ handle_info({send, {Host, Port, Version}, GWState, DevAddr, TxQ, RFCh, PHYPayloa
     DStamp = erlang:monotonic_time(milli_seconds),
     % PULL RESP
     ok = gen_udp:send(Socket, Host, Port, <<Version, Token:16, 3, (jsx:encode(Pk))/binary>>),
-    {noreply, State#state{tokens=maps:put(Token, {Timer, DevAddr, DStamp}, Tokens)}};
-
-handle_info({no_ack, Token}, #state{tokens=Tokens}=State) ->
+    {noreply, State#state{tokens = maps:put(Token, {Timer, DevAddr, DStamp}, Tokens)}};
+handle_info({no_ack, Token}, #state{tokens = Tokens} = State) ->
     case maps:take(Token, Tokens) of
         {_, Tokens2} ->
-            {noreply, State#state{tokens=Tokens2}};
+            {noreply, State#state{tokens = Tokens2}};
         error ->
             {noreply, State}
     end.
@@ -132,12 +146,10 @@ terminate(Reason, _State) ->
     ok.
 
 code_change(_OldVsn, State, _Extra) ->
-  {ok, State}.
-
+    {ok, State}.
 
 status(MAC, Pk) ->
     lorawan_gw_router:report(MAC, ?to_record(stat, Pk)).
-
 
 rxpk(MAC, PkList) ->
     lorawan_gw_router:uplinks(
@@ -145,40 +157,46 @@ rxpk(MAC, PkList) ->
             fun(Pk) ->
                 {RxQ, GWState, PHYPayload} = parse_rxpk(Pk),
                 {{MAC, RxQ, GWState}, PHYPayload}
-            end, PkList)).
+            end,
+            PkList
+        )
+    ).
 
-parse_rxpk(#{tmst:=TmSt, freq:=Freq, datr:=DatR, codr:=CodR, data:=Data}=Pk) ->
+parse_rxpk(#{tmst := TmSt, freq := Freq, datr := DatR, codr := CodR, data := Data} = Pk) ->
     % search for a rsig entry with the best RSSI
     Ant =
         lists:foldl(
             fun
                 (A1, undefined) ->
                     A1;
-                (#{rssic := RSSI1}=A1, #{rssic := RSSI2}) when RSSI1 > RSSI2 ->
+                (#{rssic := RSSI1} = A1, #{rssic := RSSI2}) when RSSI1 > RSSI2 ->
                     A1;
                 (_Else, A2) ->
                     A2
             end,
-            undefined, get_or_default(rsig, Pk, [])),
+            undefined,
+            get_or_default(rsig, Pk, [])
+        ),
     % the modu field is ignored
     % we assume "LORA" datr is a binary string and "FSK" datr is an integer
-    {#rxq{
-            freq=Freq,
-            datr=DatR,
-            codr=CodR,
-            time=
+    {
+        #rxq{
+            freq = Freq,
+            datr = DatR,
+            codr = CodR,
+            time =
                 case get_or_undefined(time, Pk) of
                     undefined -> undefined;
                     Value -> iso8601:parse_exact(Value)
                 end,
-            tmms=get_or_undefined(tmms, Pk),
-            rssi=
+            tmms = get_or_undefined(tmms, Pk),
+            rssi =
                 case {Pk, Ant} of
                     {#{rssi := RSSI}, _} when is_number(RSSI) -> RSSI;
                     {_, #{rssic := RSSI}} when is_number(RSSI) -> RSSI;
                     _ -> undefined
                 end,
-            lsnr=
+            lsnr =
                 case {Pk, Ant} of
                     {#{lsnr := SNR}, _} when is_number(SNR) -> SNR;
                     {_, #{lsnr := SNR}} when is_number(SNR) -> SNR;
@@ -186,7 +204,8 @@ parse_rxpk(#{tmst:=TmSt, freq:=Freq, datr:=DatR, codr:=CodR, data:=Data}=Pk) ->
                 end
         },
         #{tmst => TmSt},
-        base64:decode(Data)}.
+        base64:decode(Data)
+    }.
 
 % the JSON may contain "null" values that shall be converted to undefined/default
 get_or_undefined(Key, Map) ->
@@ -198,32 +217,36 @@ get_or_default(Key, Map, Default) ->
         Else -> Else
     end.
 
-build_txpk(#txq{freq=Freq, datr=DatR, codr=CodR, time=Time, powe=Power}, GWState, RFch, Data) ->
+build_txpk(
+    #txq{freq = Freq, datr = DatR, codr = CodR, time = Time, powe = Power}, GWState, RFch, Data
+) ->
     case Time of
         % class A
         Num when is_number(Num) ->
-            #{tmst:=TmSt} = GWState,
-            [{imme, false}, {tmst, TmSt+Time*1000000}];
+            #{tmst := TmSt} = GWState,
+            [{imme, false}, {tmst, TmSt + Time * 1000000}];
         % class C
         immediately ->
             % note that GWState is undefined in this case
             [{imme, true}];
         Stamp ->
             [{imme, false}, {time, iso8601:format(Stamp)}]
-    end ++ [
-    {freq, Freq},
-    {rfch, RFch},
-    {powe, Power},
-    {modu,
-        if
-            is_binary(DatR) -> <<"LORA">>;
-            is_integer(DatR) -> <<"FSK">>
-        end},
-    {datr, DatR},
-    {codr, CodR},
-    {ipol, true},
-    {size, byte_size(Data)},
-    {data, base64:encode(Data)}].
+    end ++
+        [
+            {freq, Freq},
+            {rfch, RFch},
+            {powe, Power},
+            {modu,
+                if
+                    is_binary(DatR) -> <<"LORA">>;
+                    is_integer(DatR) -> <<"FSK">>
+                end},
+            {datr, DatR},
+            {codr, CodR},
+            {ipol, true},
+            {size, byte_size(Data)},
+            {data, base64:encode(Data)}
+        ].
 
 % some gateways send <<0>>
 trim_json(<<0, Rest/binary>>) ->
@@ -238,9 +261,11 @@ trim_json(Rest) ->
 -include_lib("eunit/include/eunit.hrl").
 
 trim_test_() ->
-    [?_assertEqual(<<>>, trim_json(<<>>)),
-    ?_assertEqual(<<>>, trim_json(<<0>>)),
-    ?_assertEqual(<<>>, trim_json(<<"  \t\t">>)),
-    ?_assertEqual(<<"{\"one\": 1}">>, trim_json(<<"  {\"one\": 1}">>))].
+    [
+        ?_assertEqual(<<>>, trim_json(<<>>)),
+        ?_assertEqual(<<>>, trim_json(<<0>>)),
+        ?_assertEqual(<<>>, trim_json(<<"  \t\t">>)),
+        ?_assertEqual(<<"{\"one\": 1}">>, trim_json(<<"  {\"one\": 1}">>))
+    ].
 
 % end of file

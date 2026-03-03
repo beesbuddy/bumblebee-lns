@@ -50,63 +50,81 @@ ensure_tables() ->
     lists:foreach(fun({Name, TabDef}) -> ensure_table(Name, TabDef, Renamed) end, [
         {config, [
             {attributes, record_info(fields, config)},
-            {disc_copies, [node()]}]},
+            {disc_copies, [node()]}
+        ]},
         {user, [
             {attributes, record_info(fields, user)},
-            {disc_copies, [node()]}]},
+            {disc_copies, [node()]}
+        ]},
         {server, [
             {attributes, record_info(fields, server)},
-            {disc_copies, [node()]}]},
+            {disc_copies, [node()]}
+        ]},
         {area, [
             {attributes, record_info(fields, area)},
-            {disc_copies, [node()]}]},
+            {disc_copies, [node()]}
+        ]},
         {gateway, [
             {attributes, record_info(fields, gateway)},
-            {disc_copies, [node()]}]},
+            {disc_copies, [node()]}
+        ]},
         {multicast_channel, [
             {attributes, record_info(fields, multicast_channel)},
-            {disc_copies, [node()]}]},
+            {disc_copies, [node()]}
+        ]},
         {network, [
             {attributes, record_info(fields, network)},
-            {disc_copies, [node()]}]},
+            {disc_copies, [node()]}
+        ]},
         {group, [
             {attributes, record_info(fields, group)},
-            {disc_copies, [node()]}]},
+            {disc_copies, [node()]}
+        ]},
         {profile, [
             {attributes, record_info(fields, profile)},
             {index, [app]},
-            {disc_copies, [node()]}]},
+            {disc_copies, [node()]}
+        ]},
         {device, [
             {attributes, record_info(fields, device)},
             {index, [node]},
-            {disc_copies, [node()]}]},
+            {disc_copies, [node()]}
+        ]},
         {node, [
             {attributes, record_info(fields, node)},
             {index, [profile]},
-            {disc_copies, [node()]}]},
+            {disc_copies, [node()]}
+        ]},
         {ignored_node, [
             {attributes, record_info(fields, ignored_node)},
-            {disc_copies, [node()]}]},
+            {disc_copies, [node()]}
+        ]},
         {queued, [
             {attributes, record_info(fields, queued)},
             {index, [devaddr]},
-            {disc_copies, [node()]}]},
+            {disc_copies, [node()]}
+        ]},
         {pending, [
             {attributes, record_info(fields, pending)},
-            {disc_copies, [node()]}]},
+            {disc_copies, [node()]}
+        ]},
         {rxframe, [
             {attributes, record_info(fields, rxframe)},
             {index, [devaddr]},
-            {disc_copies, [node()]}]},
+            {disc_copies, [node()]}
+        ]},
         {connector, [
             {attributes, record_info(fields, connector)},
-            {disc_copies, [node()]}]},
+            {disc_copies, [node()]}
+        ]},
         {handler, [
             {attributes, record_info(fields, handler)},
-            {disc_copies, [node()]}]},
+            {disc_copies, [node()]}
+        ]},
         {event, [
             {attributes, record_info(fields, event)},
-            {disc_copies, [node()]}]}
+            {disc_copies, [node()]}
+        ]}
     ]),
     migrate_admin_realm_hash().
 
@@ -119,28 +137,29 @@ ensure_table(Name, TabDef, Renamed) ->
             ok = mnesia:wait_for_tables([Name], 2000),
             ensure_indexes(Name, TabDef);
         false ->
-            case lists:foldl(
-                fun
-                    (OldName, false) ->
-                        case table_exists(OldName) of
-                            true ->
-                                rename_table(OldName, Name, TabDef),
-                                true;
-                            false ->
-                                false
-                        end;
-                    (_, true) ->
-                        true
-                end,
-                false,
-                proplists:get_value(Name, Renamed, []))
+            case
+                lists:foldl(
+                    fun
+                        (OldName, false) ->
+                            case table_exists(OldName) of
+                                true ->
+                                    rename_table(OldName, Name, TabDef),
+                                    true;
+                                false ->
+                                    false
+                            end;
+                        (_, true) ->
+                            true
+                    end,
+                    false,
+                    proplists:get_value(Name, Renamed, [])
+                )
             of
                 true ->
                     ok;
                 false ->
                     create_table(Name, TabDef)
             end
-
     end.
 
 table_exists(Name) ->
@@ -165,10 +184,13 @@ rename_table(OldName, Name, TabDef) ->
             [Val] = mnesia:dirty_read(OldName, Key),
             % convert
             PropList = lists:zip(OldAttrs, tl(tuple_to_list(Val))),
-            ok = mnesia:dirty_write(Name,
-                list_to_tuple([NewRec|[get_value(Name, X, PropList) || X <- NewAttrs]]))
+            ok = mnesia:dirty_write(
+                Name,
+                list_to_tuple([NewRec | [get_value(Name, X, PropList) || X <- NewAttrs]])
+            )
         end,
-        mnesia:dirty_all_keys(OldName)),
+        mnesia:dirty_all_keys(OldName)
+    ),
     {atomic, ok} = mnesia:delete_table(OldName).
 
 ensure_indexes(Name, TabDef) ->
@@ -177,27 +199,37 @@ ensure_indexes(Name, TabDef) ->
     NewAttrs = proplists:get_value(attributes, TabDef),
     NewIndexes =
         lists:sort(
-            lists:map(fun(Key) ->
-                lorawan_utils:index_of(Key, NewAttrs)+1
-            end, proplists:get_value(index, TabDef, []))),
+            lists:map(
+                fun(Key) ->
+                    lorawan_utils:index_of(Key, NewAttrs) + 1
+                end,
+                proplists:get_value(index, TabDef, [])
+            )
+        ),
     if
         OldIndexes == NewIndexes ->
             ensure_fields(Name, TabDef);
         true ->
             lager:info("Database index update ~w: ~w to ~w", [Name, OldIndexes, NewIndexes]),
             lists:foreach(
-                fun (Idx) when Idx =< length(OldAttrs)+1 ->
-                        {atomic, ok} = mnesia:del_table_index(Name, lists:nth(Idx-1, OldAttrs));
+                fun
+                    (Idx) when Idx =< length(OldAttrs) + 1 ->
+                        {atomic, ok} = mnesia:del_table_index(Name, lists:nth(Idx - 1, OldAttrs));
                     (_) ->
                         ok
-                end, lists:subtract(OldIndexes, NewIndexes)),
+                end,
+                lists:subtract(OldIndexes, NewIndexes)
+            ),
             ensure_fields(Name, TabDef),
             lists:foreach(
-                fun (Idx) when Idx =< length(NewAttrs)+1 ->
-                        {atomic, ok} = mnesia:add_table_index(Name, lists:nth(Idx-1, NewAttrs));
+                fun
+                    (Idx) when Idx =< length(NewAttrs) + 1 ->
+                        {atomic, ok} = mnesia:add_table_index(Name, lists:nth(Idx - 1, NewAttrs));
                     (_) ->
                         ok
-                end, lists:subtract(NewIndexes, OldIndexes))
+                end,
+                lists:subtract(NewIndexes, OldIndexes)
+            )
     end.
 
 ensure_fields(Name, TabDef) ->
@@ -212,13 +244,15 @@ ensure_fields(Name, TabDef) ->
             AddedFields = lists:subtract(NewAttrs, OldAttrs),
             RemovedFields = lists:subtract(OldAttrs, NewAttrs),
             log_migration_report(Name, AddedFields, RemovedFields, UpgradedRows),
-            {atomic, ok} = mnesia:transform_table(Name,
+            {atomic, ok} = mnesia:transform_table(
+                Name,
                 fun(OldRec) ->
-                    [Rec|Values] = tuple_to_list(OldRec),
+                    [Rec | Values] = tuple_to_list(OldRec),
                     PropList = lists:zip(OldAttrs, Values),
-                    list_to_tuple([Rec|[get_value(Rec, X, PropList) || X <- NewAttrs]])
+                    list_to_tuple([Rec | [get_value(Rec, X, PropList) || X <- NewAttrs]])
                 end,
-                NewAttrs),
+                NewAttrs
+            ),
             lager:info("Database migration applied on ~w: upgraded ~B rows", [Name, UpgradedRows]),
             ok
     end.
@@ -226,7 +260,8 @@ ensure_fields(Name, TabDef) ->
 log_migration_report(Name, AddedFields, RemovedFields, UpgradedRows) ->
     lager:info(
         "Database migration report table=~w upgraded_rows=~B added_fields=~w removed_fields=~w",
-        [Name, UpgradedRows, AddedFields, RemovedFields]).
+        [Name, UpgradedRows, AddedFields, RemovedFields]
+    ).
 
 get_value(_Rec, node, PropList) ->
     % import data from old structure
@@ -238,8 +273,9 @@ get_value(user, pass_ha1, PropList) ->
         true ->
             proplists:get_value(pass_ha1, PropList);
         false ->
-            lorawan_http_digest:ha1({proplists:get_value(name, PropList),
-                ?REALM, proplists:get_value(pass, PropList)})
+            lorawan_http_digest:ha1({
+                proplists:get_value(name, PropList), ?REALM, proplists:get_value(pass, PropList)
+            })
     end;
 get_value(device, nwkkey, PropList) ->
     get_value0(appkey, nwkkey, PropList);
@@ -268,8 +304,11 @@ get_value(_Rec, X, PropList) ->
     proplists:get_value(X, PropList).
 
 get_value0(Old, New, PropList) ->
-    proplists:get_value(New, PropList,
-      proplists:get_value(Old, PropList)).
+    proplists:get_value(
+        New,
+        PropList,
+        proplists:get_value(Old, PropList)
+    ).
 
 record_fields({rxq, Freq, DatR, CodR, Time, TmSt, Rssi, LSnr}) ->
     % backward compatibility 29.4.2018
@@ -278,15 +317,16 @@ record_fields(Record) ->
     tl(tuple_to_list(Record)).
 
 set_defaults(config) ->
-    mnesia:dirty_write(#config{name= <<"main">>, items_per_page=30});
+    mnesia:dirty_write(#config{name = <<"main">>, items_per_page = 30});
 set_defaults(user) ->
     lager:info("Database create default user:password"),
     {ok, {User, Pass}} = application:get_env(bumblebee, http_admin_credentials),
     mnesia:dirty_write(#user{
-        name=User,
-        pass_ha1=lorawan_http_digest:ha1({User, ?REALM, Pass})});
+        name = User,
+        pass_ha1 = lorawan_http_digest:ha1({User, ?REALM, Pass})
+    });
 set_defaults(server) ->
-    mnesia:dirty_write(#server{sname=node(), router_perf=[]});
+    mnesia:dirty_write(#server{sname = node(), router_perf = []});
 set_defaults(_Else) ->
     ok.
 
@@ -297,9 +337,9 @@ migrate_admin_realm_hash() ->
             LegacyHA1 = lorawan_http_digest:ha1({User, LegacyRealm, Pass}),
             RealmHA1 = lorawan_http_digest:ha1({User, ?REALM, Pass}),
             case mnesia:dirty_read(user, User) of
-                [U=#user{pass_ha1=LegacyHA1}] ->
+                [U = #user{pass_ha1 = LegacyHA1}] ->
                     lager:info("Migrating admin digest hash from legacy realm to ~s", [?REALM]),
-                    mnesia:dirty_write(U#user{pass_ha1=RealmHA1});
+                    mnesia:dirty_write(U#user{pass_ha1 = RealmHA1});
                 _Else ->
                     ok
             end;
@@ -320,10 +360,13 @@ foreach_record(Database, Keys, Fun) ->
                         true ->
                             ok
                     end
-                end)
-        end, Keys).
+                end
+            )
+        end,
+        Keys
+    ).
 
-get_profile(#node{profile=ProfName}) ->
+get_profile(#node{profile = ProfName}) ->
     case mnesia:dirty_read(profile, ProfName) of
         [Profile] ->
             Profile;
@@ -333,7 +376,7 @@ get_profile(#node{profile=ProfName}) ->
 
 get_group(Node) ->
     case get_profile(Node) of
-        #profile{group=GrName} ->
+        #profile{group = GrName} ->
             case mnesia:dirty_read(group, GrName) of
                 [Group] ->
                     Group;
@@ -347,7 +390,7 @@ get_group(Node) ->
 % returns two sorted lists {uplink frames, downlink frames}
 get_rxframes(DevAddr) ->
     lists:partition(
-        fun(#rxframe{dir=Dir}) ->
+        fun(#rxframe{dir = Dir}) ->
             if
                 Dir == undefined; Dir == <<"up">>; Dir == <<"re-up">> -> true;
                 Dir == <<"down">>; Dir == <<"bcast">> -> false
@@ -355,7 +398,9 @@ get_rxframes(DevAddr) ->
         end,
         lists:sort(
             fun(#rxframe{frid = A}, #rxframe{frid = B}) -> A =< B end,
-            mnesia:dirty_index_read(rxframe, DevAddr, #rxframe.devaddr))).
+            mnesia:dirty_index_read(rxframe, DevAddr, #rxframe.devaddr)
+        )
+    ).
 
 join_cluster(MasterNode, SlaveNode) ->
     Self = node(),
@@ -368,7 +413,7 @@ join_cluster(MasterNode, SlaveNode) ->
     end.
 
 join_cluster(NodeName) ->
-    lager:info("Joining cluster ~s", [NodeName]),
+    _ = lager:info("Joining cluster ~s", [NodeName]),
 
     case {node(), net_adm:ping(NodeName)} of
         {NodeName, _} ->
@@ -385,7 +430,7 @@ leave_cluster(NodeName) ->
     lager:info("Node ~s leaving the cluster", [NodeName]),
     case {node(), net_adm:ping(NodeName)} of
         {NodeName, _} ->
-            Cluster = mnesia:system_info(running_db_nodes)--[NodeName],
+            Cluster = mnesia:system_info(running_db_nodes) -- [NodeName],
             rpc:call(node(), ?MODULE, leave, [Cluster, NodeName], 10000);
         {_, pong} ->
             rpc:call(NodeName, ?MODULE, leave_cluster, [NodeName], 10000);
@@ -404,8 +449,10 @@ join(NodeName) ->
     case mnesia:change_config(extra_db_nodes, [NodeName]) of
         {ok, [NodeName]} ->
             mnesia:change_table_copy_type(schema, node(), disc_copies),
-            [ {atomic, ok} = mnesia:add_table_copy(T, node(), disc_copies)
-                || T <- mnesia:system_info(tables)--[schema]],
+            [
+                {atomic, ok} = mnesia:add_table_copy(T, node(), disc_copies)
+             || T <- mnesia:system_info(tables) -- [schema]
+            ],
             ok = mnesia:wait_for_tables(mnesia:system_info(local_tables), 10000),
             application:start(bumblebee);
         {error, Reason} ->
@@ -416,7 +463,7 @@ join(NodeName) ->
 leave([], NodeName) ->
     lager:error("Node ~s is not in cluster", [NodeName]),
     {error, {no_cluster, NodeName}};
-leave([Master|_], NodeName) ->
+leave([Master | _], NodeName) ->
     application:stop(bumblebee),
     application:stop(mnesia),
     rpc:call(Master, mnesia, del_table_copy, [schema, NodeName]),

@@ -19,61 +19,100 @@
 -record(state, {scopes, auth_fields}).
 
 init(Req, Scopes) ->
-    {cowboy_rest, Req, #state{scopes=Scopes}}.
+    {cowboy_rest, Req, #state{scopes = Scopes}}.
 
 allowed_methods(Req, State) ->
     {[<<"OPTIONS">>, <<"GET">>], Req, State}.
 
-is_authorized(Req, #state{scopes=Scopes}=State) ->
+is_authorized(Req, #state{scopes = Scopes} = State) ->
     case lorawan_admin:handle_authorization(Req, Scopes) of
         {true, AuthFields} ->
-            {true, Req, State#state{auth_fields=AuthFields}};
+            {true, Req, State#state{auth_fields = AuthFields}};
         Else ->
             {Else, Req, State}
     end.
 
-forbidden(Req, #state{auth_fields=AuthFields}=State) ->
+forbidden(Req, #state{auth_fields = AuthFields} = State) ->
     {lorawan_admin:fields_empty(AuthFields), Req, State}.
 
 content_types_provided(Req, State) ->
-    {[
-        {{<<"application">>, <<"json">>, []}, get_timeline}
-    ], Req, State}.
+    {
+        [
+            {{<<"application">>, <<"json">>, []}, get_timeline}
+        ],
+        Req,
+        State
+    }.
 
 get_timeline(Req, State) ->
     #{'start' := Start, 'end' := End} =
         cowboy_req:match_qs([{'start', [], <<>>}, {'end', [], <<>>}], Req),
     Events = lists:map(
-        fun (#event{evid=Id, first_rx=Time, last_rx=Time, severity=Severity, text=Text}=Event) ->
-                [{id, lorawan_utils:binary_to_hex(Id)},
+        fun
+            (
+                #event{evid = Id, first_rx = Time, last_rx = Time, severity = Severity, text = Text} =
+                    Event
+            ) ->
+                [
+                    {id, lorawan_utils:binary_to_hex(Id)},
                     {className, Severity},
                     {content, Text},
                     {title, list_to_binary(title(Event))},
-                    {start, Time}];
-            (#event{evid=Id, first_rx=StartTime, last_rx=EndTime, severity=Severity, text=Text}=Event) ->
-                [{id, lorawan_utils:binary_to_hex(Id)},
+                    {start, Time}
+                ];
+            (
+                #event{
+                    evid = Id,
+                    first_rx = StartTime,
+                    last_rx = EndTime,
+                    severity = Severity,
+                    text = Text
+                } = Event
+            ) ->
+                [
+                    {id, lorawan_utils:binary_to_hex(Id)},
                     {className, Severity},
                     {content, Text},
                     {title, list_to_binary(title(Event))},
                     {start, StartTime},
-                    {'end', EndTime}]
+                    {'end', EndTime}
+                ]
         end,
-        mnesia:dirty_select(event, [{#event{evid='$1', first_rx='$2', last_rx='$3', _='_'},
-            select_datetime(Start, End, '$2', '$3'), ['$_']}])),
+        mnesia:dirty_select(event, [
+            {
+                #event{evid = '$1', first_rx = '$2', last_rx = '$3', _ = '_'},
+                select_datetime(Start, End, '$2', '$3'),
+                ['$_']
+            }
+        ])
+    ),
     RxFrames = lists:map(
-        fun(#rxframe{frid=Id, dir=Dir, devaddr=DevAddr, datetime=DateTime, port=Port, data=Data}) ->
-            [{id, lorawan_utils:binary_to_hex(Id)},
+        fun(
+            #rxframe{
+                frid = Id,
+                dir = Dir,
+                devaddr = DevAddr,
+                datetime = DateTime,
+                port = Port,
+                data = Data
+            }
+        ) ->
+            [
+                {id, lorawan_utils:binary_to_hex(Id)},
                 {className,
                     case Data of
                         undefined -> <<"info">>;
                         _Else -> Dir
                     end},
                 {content, addr_port(DevAddr, Port)},
-                {start, DateTime}]
+                {start, DateTime}
+            ]
         end,
-        mnesia:dirty_select(rxframe, [{#rxframe{datetime='$1', _='_'},
-            select_datetime(Start, End, '$1', '$1'), ['$_']}])),
-    {jsx:encode([{items, Events++RxFrames}]), Req, State}.
+        mnesia:dirty_select(rxframe, [
+            {#rxframe{datetime = '$1', _ = '_'}, select_datetime(Start, End, '$1', '$1'), ['$_']}
+        ])
+    ),
+    {jsx:encode([{items, Events ++ RxFrames}]), Req, State}.
 
 addr_port(DevAddr, undefined) ->
     lorawan_utils:binary_to_hex(DevAddr);
@@ -89,16 +128,16 @@ select_datetime(<<>>, WEnd, EStart, _) ->
 select_datetime(WStart, WEnd, EStart, EEnd) ->
     [{'>=', EEnd, {const, iso8601:parse(WStart)}}, {'=<', EStart, {const, iso8601:parse(WEnd)}}].
 
-title(#event{entity=Entity, eid=undefined}=Event) ->
+title(#event{entity = Entity, eid = undefined} = Event) ->
     [io_lib:print(Entity), "<br\>", title0(Event)];
-title(#event{entity=Entity, eid=EID}=Event) when is_atom(EID) ->
+title(#event{entity = Entity, eid = EID} = Event) when is_atom(EID) ->
     [io_lib:print(Entity), " ", atom_to_list(EID), "<br\>", title0(Event)];
-title(#event{entity=Entity, eid=EID}=Event) ->
+title(#event{entity = Entity, eid = EID} = Event) ->
     [io_lib:print(Entity), " ", lorawan_utils:binary_to_hex(EID), "<br\>", title0(Event)].
 
-title0(#event{text=Text, args=undefined}) ->
+title0(#event{text = Text, args = undefined}) ->
     Text;
-title0(#event{text=Text, args=Args}) ->
+title0(#event{text = Text, args = Args}) ->
     [Text, " ", Args].
 
 resource_exists(Req, State) ->

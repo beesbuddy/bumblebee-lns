@@ -20,12 +20,14 @@ init(Req, {Table, Fields, Module, AuthFields}) ->
 
 init0(Req, Table, Fields, Module, AuthFields) ->
     Filter = apply(Module, parse, [get_filters(Req)]),
-    Match = list_to_tuple([Table|[maps:get(X, Filter, '_') || X <- Fields]]),
+    Match = list_to_tuple([Table | [maps:get(X, Filter, '_') || X <- Fields]]),
     % convert to websocket
     lager:debug("Feed ~p connected ~p", [Table, cowboy_req:peer(Req)]),
     {ok, Timeout} = application:get_env(bumblebee, websocket_timeout),
     {cowboy_websocket, Req,
-        #state{table=Table, fields=Fields, module=Module, match=Match, auth_fields=AuthFields},
+        #state{
+            table = Table, fields = Fields, module = Module, match = Match, auth_fields = AuthFields
+        },
         #{idle_timeout => Timeout}}.
 
 get_filters(Req) ->
@@ -34,7 +36,7 @@ get_filters(Req) ->
             jsx:decode(Filter, [return_maps, {labels, atom}])
     end.
 
-websocket_init(#state{table=Table} = State) ->
+websocket_init(#state{table = Table} = State) ->
     ok = lorawan_compat:pg_join({feed, Table}, self()),
     {reply, {text, encoded_records(State)}, State}.
 
@@ -45,7 +47,7 @@ websocket_handle(Data, State) ->
     lager:warning("Unknown handle ~w", [Data]),
     {ok, State}.
 
-websocket_info({update, Scope}, #state{match=Match}=State) ->
+websocket_info({update, Scope}, #state{match = Match} = State) ->
     case lists_match(tuple_to_list(Scope), tuple_to_list(Match)) of
         true ->
             {reply, {text, encoded_records(State)}, State};
@@ -56,12 +58,13 @@ websocket_info(Info, State) ->
     lager:warning("Unknown info ~p", [Info]),
     {ok, State}.
 
-terminate(Reason, _Req, #state{table=Table}) ->
+terminate(Reason, _Req, #state{table = Table}) ->
     lager:debug("Feed ~p terminated: ~p", [Table, Reason]),
     ok.
 
-lists_match([A | RestA], [B | RestB])
-        when A == '_' orelse B == '_' orelse A == B ->
+lists_match([A | RestA], [B | RestB]) when
+    A == '_' orelse B == '_' orelse A == B
+->
     lists_match(RestA, RestB);
 lists_match([], []) ->
     true;
@@ -76,7 +79,8 @@ notify(Scope) ->
         List when is_list(List) ->
             lists:foreach(
                 fun(Pid) -> Pid ! {update, Scope} end,
-                List)
+                List
+            )
     end.
 
 encoded_records(State) ->
@@ -84,22 +88,26 @@ encoded_records(State) ->
         mnesia:transaction(
             fun() ->
                 matched_records(State)
-            end),
+            end
+        ),
     jsx:encode(Records).
 
-matched_records(#state{table=Table, match=Match}=State) ->
+matched_records(#state{table = Table, match = Match} = State) ->
     lists:map(
-        fun(Rec)-> build_record(Rec, State) end,
-        mnesia:select(Table, [{Match, [], ['$_']}])).
+        fun(Rec) -> build_record(Rec, State) end,
+        mnesia:select(Table, [{Match, [], ['$_']}])
+    ).
 
-build_record(Rec, #state{fields=Fields, module=Module, auth_fields=AuthFields}) ->
+build_record(Rec, #state{fields = Fields, module = Module, auth_fields = AuthFields}) ->
     apply(Module, build, [
         maps:from_list(
             lists:filter(
                 fun({Name, _}) ->
                     lorawan_admin:auth_field(Name, AuthFields)
                 end,
-                lists:zip(Fields, tl(tuple_to_list(Rec)))))
-        ]).
+                lists:zip(Fields, tl(tuple_to_list(Rec)))
+            )
+        )
+    ]).
 
 % end of file

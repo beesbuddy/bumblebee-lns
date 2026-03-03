@@ -20,71 +20,74 @@
 binary_to_hex(undefined) ->
     undefined;
 binary_to_hex(Id) ->
-    << <<Y>> || <<X:4>> <= Id, Y <- integer_to_list(X,16)>>.
+    <<<<Y>> || <<X:4>> <= Id, Y <- integer_to_list(X, 16)>>.
 
 hex_to_binary(undefined) ->
     undefined;
 hex_to_binary(<<"undefined">>) ->
     undefined;
 hex_to_binary(Id) ->
-    <<<<Z>> || <<X:8,Y:8>> <= Id,Z <- [binary_to_integer(<<X,Y>>,16)]>>.
+    <<<<Z>> || <<X:8, Y:8>> <= Id, Z <- [binary_to_integer(<<X, Y>>, 16)]>>.
 
 reverse(Bin) -> reverse(Bin, <<>>).
 reverse(<<>>, Acc) -> Acc;
-reverse(<<H:1/binary, Rest/binary>>, Acc) ->
-    reverse(Rest, <<H/binary, Acc/binary>>).
-
+reverse(<<H:1/binary, Rest/binary>>, Acc) -> reverse(Rest, <<H/binary, Acc/binary>>).
 
 index_of(Item, List) -> index_of(Item, List, 1).
 
-index_of(_, [], _)  -> undefined;
-index_of(Item, [Item|_], Index) -> Index;
-index_of(Item, [_|Tl], Index) -> index_of(Item, Tl, Index+1).
-
+index_of(_, [], _) -> undefined;
+index_of(Item, [Item | _], Index) -> Index;
+index_of(Item, [_ | Tl], Index) -> index_of(Item, Tl, Index + 1).
 
 ms_diff({MSecs1, Secs1, USecs1}, {MSecs2, Secs2, USecs2}) when MSecs1 =< MSecs2 ->
-    1000*(?MEGA*(MSecs2-MSecs1)+(Secs2-Secs1))
-        +(USecs2-USecs1) div 1000.
+    1000 * (?MEGA * (MSecs2 - MSecs1) + (Secs2 - Secs1)) +
+        (USecs2 - USecs1) div 1000.
 
 precise_universal_time() ->
     {Date, {Hours, Min, Secs}} = calendar:universal_time(),
     {_, _, USecs} = erlang:timestamp(),
-    {Date, {Hours, Min, Secs + (USecs div 1000)/1000}}.
+    {Date, {Hours, Min, Secs + (USecs div 1000) / 1000}}.
 
 time_to_gps() ->
     time_to_gps(precise_universal_time()).
 
 time_to_gps({Date, {Hours, Min, Secs}}) ->
-    TotalSecs = calendar:datetime_to_gregorian_seconds({Date, {Hours, Min, trunc(Secs)}})
-            - calendar:datetime_to_gregorian_seconds({{1980, 1, 6}, {0, 0, 0}})
-            + 17, % leap seconds
-    trunc(1000*(TotalSecs + (Secs - trunc(Secs)))). % ms
+    TotalSecs =
+        calendar:datetime_to_gregorian_seconds({Date, {Hours, Min, trunc(Secs)}}) -
+            calendar:datetime_to_gregorian_seconds({{1980, 1, 6}, {0, 0, 0}}) +
+            % leap seconds
+            17,
+    % ms
+    trunc(1000 * (TotalSecs + (Secs - trunc(Secs)))).
 
 time_to_unix() ->
     time_to_gps(precise_universal_time()).
 
 time_to_unix({Date, {Hours, Min, Secs}}) ->
-    TotalSecs = calendar:datetime_to_gregorian_seconds({Date, {Hours, Min, trunc(Secs)}})
-            - epoch_seconds(),
-    trunc(1000*(TotalSecs + (Secs - trunc(Secs)))). % ms
+    TotalSecs =
+        calendar:datetime_to_gregorian_seconds({Date, {Hours, Min, trunc(Secs)}}) -
+            epoch_seconds(),
+    % ms
+    trunc(1000 * (TotalSecs + (Secs - trunc(Secs)))).
 
 datetime_to_timestamp({Date, {Hours, Min, Secs}}) ->
     TotalSecs =
-        calendar:datetime_to_gregorian_seconds({Date, {Hours, Min, trunc(Secs)}})
-        - epoch_seconds(),
-    {TotalSecs div ?MEGA, TotalSecs rem ?MEGA, trunc(?MEGA*Secs)-?MEGA*trunc(Secs)};
+        calendar:datetime_to_gregorian_seconds({Date, {Hours, Min, trunc(Secs)}}) -
+            epoch_seconds(),
+    {TotalSecs div ?MEGA, TotalSecs rem ?MEGA, trunc(?MEGA * Secs) - ?MEGA * trunc(Secs)};
 datetime_to_timestamp(undefined) ->
-    {0, 0, 0}. %% midnight
+    %% midnight
+    {0, 0, 0}.
 
 epoch_seconds() ->
     calendar:datetime_to_gregorian_seconds({{1970, 1, 1}, {0, 0, 0}}).
 
 apply_offset({Date, {Hours, Min, Secs}}, {OHours, OMin, OSecs}) ->
     TotalSecs =
-        calendar:datetime_to_gregorian_seconds({Date, {Hours, Min, trunc(Secs)}})
-        + (60*((60*OHours) + OMin)) + OSecs,
+        calendar:datetime_to_gregorian_seconds({Date, {Hours, Min, trunc(Secs)}}) +
+            (60 * ((60 * OHours) + OMin)) + OSecs,
     {Date2, {Hours2, Min2, Secs2}} = calendar:gregorian_seconds_to_datetime(TotalSecs),
-    {Date2, {Hours2, Min2, Secs2+(Secs-trunc(Secs))}}.
+    {Date2, {Hours2, Min2, Secs2 + (Secs - trunc(Secs))}}.
 
 throw_info(Entity, Text) ->
     throw_info(Entity, Text, unique).
@@ -110,13 +113,11 @@ throw_error({Entity, EID}, Text, Mark) ->
 throw_error(Entity, Text, Mark) ->
     throw_event(error, {Entity, undefined}, Text, Mark).
 
-
 throw_event(Severity, {Entity, undefined}, Text, Mark) ->
     lager:log(Severity, self(), "~s ~p", [Entity, Text]),
     lorawan_prometheus:event(Severity, {Entity, undefined}, Text),
     send_event(Severity, {Entity, undefined}, Text),
     write_event(Severity, {Entity, undefined}, Text, Mark);
-
 throw_event(Severity, {Entity, EID}, Text, Mark) ->
     if
         Entity == server; Entity == connector; Entity == handler ->
@@ -129,12 +130,13 @@ throw_event(Severity, {Entity, EID}, Text, Mark) ->
     write_event(Severity, {Entity, EID}, Text, Mark).
 
 send_event(Severity, {Entity, EID}, Text) ->
-    AppID = case mnesia:dirty_read(config, <<"main">>) of
-        [] ->
-            undefined;
-        [Config] ->
-            Config#config.app
-    end,
+    AppID =
+        case mnesia:dirty_read(config, <<"main">>) of
+            [] ->
+                undefined;
+            [Config] ->
+                Config#config.app
+        end,
     {Event, Args} = event_args(Text),
     Vars = #{
         app => AppID,
@@ -154,8 +156,17 @@ write_event(Severity, {Entity, EID}, Text, unique) ->
     Time = calendar:universal_time(),
     {Event, Args} = event_args(Text),
     EvId = evid({Entity, EID}, Event, Time),
-    mnesia:dirty_write(event, #event{evid=EvId, severity=Severity,
-        first_rx=Time, last_rx=Time, count=1, entity=Entity, eid=EID, text=Event, args=Args});
+    mnesia:dirty_write(event, #event{
+        evid = EvId,
+        severity = Severity,
+        first_rx = Time,
+        last_rx = Time,
+        count = 1,
+        entity = Entity,
+        eid = EID,
+        text = Event,
+        args = Args
+    });
 write_event(Severity, {Entity, EID}, Text, Mark) ->
     {Event, Args} = event_args(Text),
     EvId = evid({Entity, EID}, Event, Mark),
@@ -163,14 +174,26 @@ write_event(Severity, {Entity, EID}, Text, Mark) ->
         mnesia:transaction(fun() ->
             case mnesia:read(event, EvId, write) of
                 [E] ->
-                    mnesia:write(E#event{last_rx=calendar:universal_time(),
-                        count=inc(E#event.count), text=Event, args=Args});
+                    mnesia:write(E#event{
+                        last_rx = calendar:universal_time(),
+                        count = inc(E#event.count),
+                        text = Event,
+                        args = Args
+                    });
                 [] ->
                     % first_rx and last_rx shall be identical
                     Time = calendar:universal_time(),
-                    mnesia:write(#event{evid=EvId, severity=Severity,
-                        first_rx=Time, last_rx=Time, count=1,
-                        entity=Entity, eid=EID, text=Event, args=Args})
+                    mnesia:write(#event{
+                        evid = EvId,
+                        severity = Severity,
+                        first_rx = Time,
+                        last_rx = Time,
+                        count = 1,
+                        entity = Entity,
+                        eid = EID,
+                        text = Event,
+                        args = Args
+                    })
             end
         end),
     ok.
@@ -189,16 +212,32 @@ event_args(Event) when is_binary(Event) ->
     {Event, undefined}.
 
 inc(undefined) -> 1;
-inc(Num) -> Num+1.
+inc(Num) -> Num + 1.
 
 -include_lib("eunit/include/eunit.hrl").
 
-time_test_()-> [
-    ?_assertEqual({0,1,0}, datetime_to_timestamp({{1970,1,1}, {0,0,1}})),
-    ?_assertEqual({0,10,1000}, datetime_to_timestamp({{1970,1,1}, {0,0,10.001}})),
-    ?_assertEqual(1900, ms_diff(datetime_to_timestamp({{2017,1,1}, {13,0,1.1}}), datetime_to_timestamp({{2017,1,1}, {13,0,3}}))),
-    ?_assertEqual(1, ms_diff(datetime_to_timestamp({{2017,1,1}, {13,1,59.999}}), datetime_to_timestamp({{2017,1,1}, {13,2,0}}))),
-    ?_assertEqual({{1989,11,17}, {16,59,10.001}}, apply_offset({{1989,11,17}, {18,0,10.001}}, {-1,-1,0}))
-].
+time_test_() ->
+    [
+        ?_assertEqual({0, 1, 0}, datetime_to_timestamp({{1970, 1, 1}, {0, 0, 1}})),
+        ?_assertEqual({0, 10, 1000}, datetime_to_timestamp({{1970, 1, 1}, {0, 0, 10.001}})),
+        ?_assertEqual(
+            1900,
+            ms_diff(
+                datetime_to_timestamp({{2017, 1, 1}, {13, 0, 1.1}}),
+                datetime_to_timestamp({{2017, 1, 1}, {13, 0, 3}})
+            )
+        ),
+        ?_assertEqual(
+            1,
+            ms_diff(
+                datetime_to_timestamp({{2017, 1, 1}, {13, 1, 59.999}}),
+                datetime_to_timestamp({{2017, 1, 1}, {13, 2, 0}})
+            )
+        ),
+        ?_assertEqual(
+            {{1989, 11, 17}, {16, 59, 10.001}},
+            apply_offset({{1989, 11, 17}, {18, 0, 10.001}}, {-1, -1, 0})
+        )
+    ].
 
 % end of file

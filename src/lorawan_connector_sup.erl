@@ -14,10 +14,10 @@ start_link() ->
 
 start_child(Id, Module, Args) ->
     lager:debug("Start ~p", [Id]),
-    supervisor:start_child(?MODULE,
-        {Id,
-            {Module, start_link, Args},
-            transient, 5000, worker, [Module]}).
+    supervisor:start_child(
+        ?MODULE,
+        {Id, {Module, start_link, Args}, transient, 5000, worker, [Module]}
+    ).
 
 stop_child(Id) ->
     lager:debug("Stop ~p", [Id]),

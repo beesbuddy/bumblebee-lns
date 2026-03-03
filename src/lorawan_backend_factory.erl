@@ -37,7 +37,8 @@ handle_info(start_all, State) ->
             [Connector] = mnesia:dirty_read(connector, ConnId),
             start_connector(Connector)
         end,
-        mnesia:dirty_all_keys(connector)),
+        mnesia:dirty_all_keys(connector)
+    ),
     {noreply, State};
 % ignore schema changes
 handle_info({mnesia_table_event, {write, schema, _NewRec, _OldRec, _Activity}}, State) ->
@@ -54,7 +55,6 @@ handle_info({mnesia_table_event, {write, _Table, NewRec0, [OldRec0], _Activity}}
 handle_info({mnesia_table_event, {delete, _Table, _What, [OldRec0], _Activity}}, State) ->
     item_deleted(OldRec0),
     {noreply, State};
-
 handle_info(Info, State) ->
     lager:debug("unknown info ~p", [Info]),
     {noreply, State}.
@@ -65,41 +65,51 @@ terminate(_Reason, _State) ->
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
-item_created(#node{profile=ProfId}) ->
+item_created(#node{profile = ProfId}) ->
     announce_profile_update(ProfId);
-item_created(#profile{app=App}) ->
+item_created(#profile{app = App}) ->
     announce_backend_update(App);
-item_created(#connector{}=Connector) ->
+item_created(#connector{} = Connector) ->
     start_connector(Connector).
 
-item_updated(#node{devaddr=DevAddr, profile=Profile, appargs=Args},
-        #node{devaddr=DevAddr, profile=Profile, appargs=Args}) ->
+item_updated(
+    #node{devaddr = DevAddr, profile = Profile, appargs = Args},
+    #node{devaddr = DevAddr, profile = Profile, appargs = Args}
+) ->
     % nothing significant has changed
     ok;
-item_updated(#node{devaddr=DevAddr, profile=ProfId1}, #node{devaddr=DevAddr, profile=ProfId2}) ->
+item_updated(#node{devaddr = DevAddr, profile = ProfId1}, #node{
+    devaddr = DevAddr, profile = ProfId2
+}) ->
     % the node was moved from one profile to another, so two set of connectors may be affected
     announce_profile_update(ProfId2),
     announce_profile_update(ProfId1);
-item_updated(#profile{name=Name, app=App}, #profile{name=Name, app=App}) ->
+item_updated(#profile{name = Name, app = App}, #profile{name = Name, app = App}) ->
     % nothing significant has changed
     ok;
-item_updated(#profile{name=Name, app=App1}, #profile{name=Name, app=App2}) ->
+item_updated(#profile{name = Name, app = App1}, #profile{name = Name, app = App2}) ->
     announce_backend_update(App2),
     announce_backend_update(App1);
-item_updated(#connector{connid=ConnId}=Connector1, #connector{connid=ConnId}=Connector2) ->
+item_updated(#connector{connid = ConnId} = Connector1, #connector{connid = ConnId} = Connector2) ->
     stop_connector(Connector2),
     start_connector(Connector1).
 
-item_deleted(#node{profile=ProfId}) ->
+item_deleted(#node{profile = ProfId}) ->
     announce_profile_update(ProfId);
-item_deleted(#profile{app=App}) ->
+item_deleted(#profile{app = App}) ->
     announce_backend_update(App);
-item_deleted(#connector{}=Connector) ->
+item_deleted(#connector{} = Connector) ->
     stop_connector(Connector).
 
-
-start_connector(#connector{connid=Id, app=App, uri=Uri, enabled=true,
-        failed=Failed}=Connector) when Failed == undefined; Failed == [] ->
+start_connector(
+    #connector{
+        connid = Id,
+        app = App,
+        uri = Uri,
+        enabled = true,
+        failed = Failed
+    } = Connector
+) when Failed == undefined; Failed == [] ->
     case find_module(Uri) of
         {ok, Module} ->
             lorawan_compat:pg_create({backend, App}),
@@ -110,8 +120,9 @@ start_connector(#connector{connid=Id, app=App, uri=Uri, enabled=true,
 start_connector(#connector{}) ->
     ok.
 
-stop_connector(#connector{connid=Id, uri=Uri, enabled=true, failed=Failed})
-        when Failed == undefined; Failed == [] ->
+stop_connector(#connector{connid = Id, uri = Uri, enabled = true, failed = Failed}) when
+    Failed == undefined; Failed == []
+->
     case find_module(Uri) of
         {ok, Module} ->
             apply(Module, stop_connector, [Id]);
@@ -140,7 +151,6 @@ find_module0(Scheme, [{Module, SchemeList} | Other]) ->
 find_module0(Scheme, []) ->
     {error, {unknown_scheme, Scheme}}.
 
-
 -spec uplink(binary(), {#profile{}, #node{}} | {#profile{}, #device{}, binary()}, map()) -> ok.
 uplink(App, Node, Vars) ->
     send_to_connectors(App, {uplink, Node, Vars}).
@@ -151,7 +161,7 @@ event(App, Node, Vars) ->
 
 announce_profile_update(ProfId) ->
     case mnesia:dirty_read(profile, ProfId) of
-        [#profile{app=App}] ->
+        [#profile{app = App}] ->
             announce_backend_update(App);
         _Else ->
             []
@@ -162,14 +172,18 @@ announce_backend_update(App) ->
 
 nodes_with_backend(App) ->
     lists:foldl(
-        fun(#profile{name=ProfId}=Profile, Acc) ->
+        fun(#profile{name = ProfId} = Profile, Acc) ->
             lists:foldl(
                 fun(Node, Acc2) ->
                     [{Profile, Node} | Acc2]
                 end,
-                Acc, mnesia:dirty_index_read(node, ProfId, #node.profile))
+                Acc,
+                mnesia:dirty_index_read(node, ProfId, #node.profile)
+            )
         end,
-        [], mnesia:dirty_index_read(profile, App, #profile.app)).
+        [],
+        mnesia:dirty_index_read(profile, App, #profile.app)
+    ).
 
 send_to_connectors(App, Message) ->
     case lorawan_compat:pg_get_members({backend, App}) of
@@ -181,7 +195,8 @@ send_to_connectors(App, Message) ->
         List when is_list(List) ->
             lists:foreach(
                 fun(Pid) -> Pid ! Message end,
-                List)
+                List
+            )
     end.
 
 % end of file

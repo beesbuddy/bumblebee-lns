@@ -13,17 +13,21 @@
 
 -include("lorawan_db.hrl").
 
--record(state, {conn, pid, mref, ready, streams, prefix, publish_uplinks, publish_events, auth, nc}).
+-record(state, {
+    conn, pid, mref, ready, streams, prefix, publish_uplinks, publish_events, auth, nc
+}).
 
-start_connector(#connector{connid=Id, received=Received}=Connector) ->
+start_connector(#connector{connid = Id, received = Received} = Connector) ->
     case lorawan_connector:pattern_for_cowboy(Received) of
         undefined ->
             ok;
         error ->
             lorawan_connector:raise_failed(Id, {badarg, Received});
         Pattern ->
-            lorawan_http_registry:update({http, Id},
-                #{routes => [{Pattern, lorawan_connector_http_in, [Connector]}]})
+            lorawan_http_registry:update(
+                {http, Id},
+                #{routes => [{Pattern, lorawan_connector_http_in, [Connector]}]}
+            )
     end,
     lorawan_connector_sup:start_child(Id, ?MODULE, [Connector]).
 
@@ -34,16 +38,28 @@ stop_connector(Id) ->
 start_link(Connector) ->
     gen_server:start_link(?MODULE, [Connector], []).
 
-init([#connector{connid=Id, app=App,
-        publish_uplinks=PubUp, publish_events=PubEv, name=UserName, pass=Password}=Conn]) ->
+init([
+    #connector{
+        connid = Id,
+        app = App,
+        publish_uplinks = PubUp,
+        publish_events = PubEv,
+        name = UserName,
+        pass = Password
+    } = Conn
+]) ->
     ok = lorawan_compat:pg_join({backend, App}, self()),
     try
-        {ok, ensure_gun(
-            #state{conn=Conn,
-                publish_uplinks=lorawan_connector:prepare_filling(PubUp),
-                publish_events=lorawan_connector:prepare_filling(PubEv),
-                auth=lorawan_connector:prepare_filling([UserName, Password]),
-                nc=1})}
+        {ok,
+            ensure_gun(
+                #state{
+                    conn = Conn,
+                    publish_uplinks = lorawan_connector:prepare_filling(PubUp),
+                    publish_events = lorawan_connector:prepare_filling(PubEv),
+                    auth = lorawan_connector:prepare_filling([UserName, Password]),
+                    nc = 1
+                }
+            )}
     catch
         _:Error ->
             lorawan_connector:raise_failed(Id, Error),
@@ -59,11 +75,11 @@ handle_cast(_Msg, State) ->
 handle_info(nodes_changed, State) ->
     % nothing to do here
     {noreply, State};
-
-handle_info({uplink, _Node, _Vars0}, #state{publish_uplinks=PatPub}=State)
-        when PatPub == undefined; PatPub == ?EMPTY_PATTERN ->
+handle_info({uplink, _Node, _Vars0}, #state{publish_uplinks = PatPub} = State) when
+    PatPub == undefined; PatPub == ?EMPTY_PATTERN
+->
     {noreply, State};
-handle_info({uplink, _Node, Vars0}, #state{conn=Conn}=State) ->
+handle_info({uplink, _Node, Vars0}, #state{conn = Conn} = State) ->
     case ensure_connected(ensure_gun(State)) of
         {ok, State2} ->
             {noreply, handle_uplinks(Vars0, State2)};
@@ -71,11 +87,11 @@ handle_info({uplink, _Node, Vars0}, #state{conn=Conn}=State) ->
             lager:warning("Connector ~p not connected, uplink lost", [Conn#connector.connid]),
             {noreply, State2}
     end;
-
-handle_info({event, _Node, _Vars0}, #state{publish_events=PatPub}=State)
-        when PatPub == undefined; PatPub == ?EMPTY_PATTERN ->
+handle_info({event, _Node, _Vars0}, #state{publish_events = PatPub} = State) when
+    PatPub == undefined; PatPub == ?EMPTY_PATTERN
+->
     {noreply, State};
-handle_info({event, _Node, Vars0}, #state{conn=Conn}=State) ->
+handle_info({event, _Node, Vars0}, #state{conn = Conn} = State) ->
     case ensure_connected(ensure_gun(State)) of
         {ok, State2} ->
             {noreply, handle_event(Vars0, State2)};
@@ -83,14 +99,19 @@ handle_info({event, _Node, Vars0}, #state{conn=Conn}=State) ->
             lager:warning("Connector ~p not connected, event lost", [Conn#connector.connid]),
             {noreply, State2}
     end;
-
-handle_info({gun_up, C, _Proto}, State=#state{pid=C}) ->
-    {noreply, State#state{ready=true}};
-handle_info({gun_down, C, _Proto, _Reason, Killed, Unprocessed},
-        State=#state{pid=C, streams=Streams}) ->
-    {noreply, State#state{ready=false, streams=remove_list(remove_list(Streams, Killed), Unprocessed)}};
-handle_info({gun_response, C, StreamRef, Fin, 401, Headers},
-        State=#state{pid=C, streams=Streams}) ->
+handle_info({gun_up, C, _Proto}, State = #state{pid = C}) ->
+    {noreply, State#state{ready = true}};
+handle_info(
+    {gun_down, C, _Proto, _Reason, Killed, Unprocessed},
+    State = #state{pid = C, streams = Streams}
+) ->
+    {noreply, State#state{
+        ready = false, streams = remove_list(remove_list(Streams, Killed), Unprocessed)
+    }};
+handle_info(
+    {gun_response, C, StreamRef, Fin, 401, Headers},
+    State = #state{pid = C, streams = Streams}
+) ->
     State3 =
         case proplists:get_value(<<"www-authenticate">>, Headers) of
             undefined ->
@@ -98,18 +119,28 @@ handle_info({gun_response, C, StreamRef, Fin, 401, Headers},
                 State;
             WWWAuthenticate ->
                 {URI, Auth, Headers, Body} = maps:get(StreamRef, Streams),
-                case handle_authenticate([digest, basic], URI, Auth, Body,
-                        cow_http_hd:parse_www_authenticate(WWWAuthenticate), State) of
+                case
+                    handle_authenticate(
+                        [digest, basic],
+                        URI,
+                        Auth,
+                        Body,
+                        cow_http_hd:parse_www_authenticate(WWWAuthenticate),
+                        State
+                    )
+                of
                     {[], State2} ->
                         lager:warning("Authentication failed: ~p", [WWWAuthenticate]),
                         State2;
                     {Auth2, State2} ->
-                        do_publish({URI, authenticated, Headers++Auth2, Body}, State2)
+                        do_publish({URI, authenticated, Headers ++ Auth2, Body}, State2)
                 end
         end,
     {noreply, fin_stream(StreamRef, Fin, State3)};
-handle_info({gun_response, C, StreamRef, Fin, Status, Headers},
-        State=#state{pid = C, streams = Streams, conn = #connector{uri = Uri}}) ->
+handle_info(
+    {gun_response, C, StreamRef, Fin, Status, Headers},
+    State = #state{pid = C, streams = Streams, conn = #connector{uri = Uri}}
+) ->
     if
         Status < 300 ->
             ok;
@@ -127,44 +158,50 @@ handle_info({gun_response, C, StreamRef, Fin, Status, Headers},
             lorawan_utils:throw_warning(connector_http, {http_error, {Status, Uri, Path}})
     end,
     {noreply, fin_stream(StreamRef, Fin, State)};
-handle_info({gun_data, C, StreamRef, Fin, _Data}, State=#state{pid=C}) ->
+handle_info({gun_data, C, StreamRef, Fin, _Data}, State = #state{pid = C}) ->
     {noreply, fin_stream(StreamRef, Fin, State)};
-
-handle_info({'DOWN', _MRef, process, C, Reason}, #state{conn=Conn, pid=C}=State) ->
+handle_info({'DOWN', _MRef, process, C, Reason}, #state{conn = Conn, pid = C} = State) ->
     lager:warning("Connector ~s failed: ~p", [Conn#connector.connid, Reason]),
-    {noreply, State#state{pid=undefined}};
-
-handle_info({status, From}, #state{conn=#connector{uri= <<"http:">>}, pid=undefined}=State) ->
+    {noreply, State#state{pid = undefined}};
+handle_info({status, From}, #state{conn = #connector{uri = <<"http:">>}, pid = undefined} = State) ->
     From ! {status, []},
     {noreply, State};
-handle_info({status, From}, #state{conn=#connector{connid=Id, app=App, uri=Uri}}=State) ->
-    From ! {status, [
-        set_status(State,
-            #{module => <<"http">>, pid => lorawan_connector:pid_to_binary(self()),
-                connid => Id, app => App, uri => Uri})]},
+handle_info({status, From}, #state{conn = #connector{connid = Id, app = App, uri = Uri}} = State) ->
+    From !
+        {status, [
+            set_status(
+                State,
+                #{
+                    module => <<"http">>,
+                    pid => lorawan_connector:pid_to_binary(self()),
+                    connid => Id,
+                    app => App,
+                    uri => Uri
+                }
+            )
+        ]},
     {noreply, State};
-
 handle_info(Unknown, State) ->
     lager:debug("Unknown message: ~p", [Unknown]),
     {noreply, State}.
 
-terminate(normal, #state{conn=#connector{connid=ConnId}, pid=C}) ->
+terminate(normal, #state{conn = #connector{connid = ConnId}, pid = C}) ->
     lager:debug("Connector ~s terminated: normal", [ConnId]),
     disconnect(C);
-terminate(Reason, #state{conn=#connector{connid=ConnId}, pid=C}) ->
+terminate(Reason, #state{conn = #connector{connid = ConnId}, pid = C}) ->
     lager:warning("Connector ~s terminated: ~p", [ConnId, Reason]),
     disconnect(C).
 
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
-ensure_gun(#state{pid=Pid}=State) when is_pid(Pid) ->
+ensure_gun(#state{pid = Pid} = State) when is_pid(Pid) ->
     % is running
     State;
-ensure_gun(#state{conn=#connector{uri= <<"http:">>}, pid=undefined}=State) ->
+ensure_gun(#state{conn = #connector{uri = <<"http:">>}, pid = undefined} = State) ->
     % should not be running
     State;
-ensure_gun(#state{conn=#connector{connid=ConnId, uri=Uri}, pid=undefined}=State) ->
+ensure_gun(#state{conn = #connector{connid = ConnId, uri = Uri}, pid = undefined} = State) ->
     lager:debug("Connecting ~s to ~s", [ConnId, Uri]),
     {ConnPid, Prefix} =
         case lorawan_compat:parse_uri(Uri, [{http, 80}, {https, 443}]) of
@@ -173,20 +210,20 @@ ensure_gun(#state{conn=#connector{connid=ConnId, uri=Uri}, pid=undefined}=State)
                 {Pid, Path};
             {ok, {https, _UserInfo, HostName, Port, Path, _Query}} ->
                 Opts = application:get_env(bumblebee, ssl_options, []),
-                {ok, Pid} = gun:open(HostName, Port, #{transport=>ssl, transport_opts=>Opts}),
+                {ok, Pid} = gun:open(HostName, Port, #{transport => ssl, transport_opts => Opts}),
                 {Pid, Path}
         end,
     MRef = monitor(process, ConnPid),
-    State#state{pid=ConnPid, mref=MRef, ready=false, streams=#{}, prefix=Prefix}.
+    State#state{pid = ConnPid, mref = MRef, ready = false, streams = #{}, prefix = Prefix}.
 
-ensure_connected(#state{ready=true}=State) ->
+ensure_connected(#state{ready = true} = State) ->
     {ok, State};
-ensure_connected(#state{pid=undefined, ready=false}=State) ->
+ensure_connected(#state{pid = undefined, ready = false} = State) ->
     {error, State};
-ensure_connected(#state{conn=Conn, pid=ConnPid, mref=MRef, ready=false}=State) ->
+ensure_connected(#state{conn = Conn, pid = ConnPid, mref = MRef, ready = false} = State) ->
     case gun:await_up(ConnPid, MRef) of
         {ok, _Protocol} ->
-            {ok, State#state{ready=true}};
+            {ok, State#state{ready = true}};
         {error, Reason} ->
             lager:debug("~s failed to connect: ~p", [Conn#connector.connid, Reason]),
             {error, State}
@@ -200,41 +237,49 @@ disconnect(ConnPid) ->
 handle_uplinks(Vars0, State) when is_list(Vars0) ->
     lists:foldl(
         fun(V0, S) -> handle_uplink(V0, S) end,
-        State, Vars0);
+        State,
+        Vars0
+    );
 handle_uplinks(Vars0, State) ->
     handle_uplink(Vars0, State).
 
-handle_uplink(Vars0, #state{conn=#connector{format=Format}, publish_uplinks=Publish}=State) ->
+handle_uplink(Vars0, #state{conn = #connector{format = Format}, publish_uplinks = Publish} = State) ->
     {ContentType, Body} = encode_uplink(Format, Vars0),
     send_publish(lorawan_admin:build(Vars0), Publish, ContentType, Body, State).
 
-handle_event(Vars0, #state{publish_events=Publish}=State) ->
+handle_event(Vars0, #state{publish_events = Publish} = State) ->
     Vars = lorawan_admin:build(Vars0),
     send_publish(Vars, Publish, <<"application/json">>, jsx:encode(Vars), State).
 
-send_publish(Vars, Publish, ContentType, Body, #state{conn=Conn, prefix=Prefix, auth=AuthP}=State) ->
+send_publish(
+    Vars, Publish, ContentType, Body, #state{conn = Conn, prefix = Prefix, auth = AuthP} = State
+) ->
     URI = binary:list_to_bin([Prefix | lorawan_connector:fill_pattern(Publish, Vars)]),
     [User, Pass] = lorawan_connector:fill_pattern(AuthP, Vars),
     case Conn of
         #connector{auth = <<"token">>} ->
-            do_publish({URI, authenticated, [{<<"content-type">>, ContentType}, {User, Pass}], Body}, State);
+            do_publish(
+                {URI, authenticated, [{<<"content-type">>, ContentType}, {User, Pass}], Body}, State
+            );
         #connector{} ->
             do_publish({URI, [User, Pass], [{<<"content-type">>, ContentType}], Body}, State)
     end.
 
-do_publish({URI, _Auth, Headers, Body}=Msg, State=#state{pid=C, streams=Streams}) ->
+do_publish({URI, _Auth, Headers, Body} = Msg, State = #state{pid = C, streams = Streams}) ->
     StreamRef = gun:post(C, URI, Headers, Body),
-    State#state{streams=maps:put(StreamRef, Msg, Streams)}.
+    State#state{streams = maps:put(StreamRef, Msg, Streams)}.
 
-fin_stream(StreamRef, fin, State=#state{streams=Streams}) ->
-    State#state{streams=maps:remove(StreamRef, Streams)};
+fin_stream(StreamRef, fin, State = #state{streams = Streams}) ->
+    State#state{streams = maps:remove(StreamRef, Streams)};
 fin_stream(_StreamRef, nofin, State) ->
     State.
 
 remove_list(Map, List) ->
     lists:foldl(
         fun(Item, Map2) -> maps:remove(Item, Map2) end,
-        Map, List).
+        Map,
+        List
+    ).
 
 encode_uplink(<<"raw">>, Vars) ->
     {<<"application/octet-stream">>, maps:get(data, Vars, <<>>)};
@@ -255,39 +300,68 @@ handle_authenticate([Scheme | Rest], URI, Auth, Body, WWWAuthenticate, State) ->
 handle_authenticate([], _, _, _, _, State) ->
     {[], State}.
 
-handle_authenticate0(_, _, _URI, [Name, Pass], _, State)
-        when Name == undefined; Pass == undefined ->
+handle_authenticate0(_, _, _URI, [Name, Pass], _, State) when
+    Name == undefined; Pass == undefined
+->
     lager:error("No credentials for HTTP authentication"),
     {[], State};
 handle_authenticate0(basic, _, _, [Name, Pass], _, State) ->
     Cred = base64:encode(<<Name/binary, $:, Pass/binary>>),
     {[lorawan_http_digest:authorization_header(basic, Cred)], State};
-handle_authenticate0(digest, Value, URI, [Name, Pass], Body, State=#state{nc=Nc0}) ->
+handle_authenticate0(digest, Value, URI, [Name, Pass], Body, State = #state{nc = Nc0}) ->
     Realm = proplists:get_value(<<"realm">>, Value, <<>>),
     Nonce = proplists:get_value(<<"nonce">>, Value, <<>>),
     Opaque = proplists:get_value(<<"opaque">>, Value, <<>>),
     case proplists:get_value(<<"qop">>, Value) of
         undefined ->
-            Response = lorawan_http_digest:response(<<"POST">>, URI, Body, {Name, Realm, Pass}, Nonce),
-            {[lorawan_http_digest:authorization_header(digest, [{<<"username">>, Name}, {<<"realm">>, Realm},
-                {<<"nonce">>, Nonce}, {<<"uri">>, URI}, {<<"algorithm">>, <<"MD5">>},
-                {<<"response">>, Response}, {<<"opaque">>, Opaque}])], State};
+            Response = lorawan_http_digest:response(
+                <<"POST">>, URI, Body, {Name, Realm, Pass}, Nonce
+            ),
+            {
+                [
+                    lorawan_http_digest:authorization_header(digest, [
+                        {<<"username">>, Name},
+                        {<<"realm">>, Realm},
+                        {<<"nonce">>, Nonce},
+                        {<<"uri">>, URI},
+                        {<<"algorithm">>, <<"MD5">>},
+                        {<<"response">>, Response},
+                        {<<"opaque">>, Opaque}
+                    ])
+                ],
+                State
+            };
         Qop0 ->
-            [Qop|_] = binary:split(Qop0, [<<",">>], [global]),
+            [Qop | _] = binary:split(Qop0, [<<",">>], [global]),
             Nc = lorawan_http_digest:nc(Nc0),
             CNonce = lorawan_http_digest:nonce(4),
-            Response = lorawan_http_digest:response(<<"POST">>, URI, Body, {Name, Realm, Pass}, Nonce, Nc, CNonce, Qop),
-            {[lorawan_http_digest:authorization_header(digest, [{<<"username">>, Name}, {<<"realm">>, Realm},
-                {<<"nonce">>, Nonce}, {<<"uri">>, URI}, {<<"algorithm">>, <<"MD5">>},
-                {<<"response">>, Response}, {<<"opaque">>, Opaque}, {<<"qop">>, Qop},
-                {<<"nc">>, Nc}, {<<"cnonce">>, CNonce}])], State#state{nc=Nc0+1}}
+            Response = lorawan_http_digest:response(
+                <<"POST">>, URI, Body, {Name, Realm, Pass}, Nonce, Nc, CNonce, Qop
+            ),
+            {
+                [
+                    lorawan_http_digest:authorization_header(digest, [
+                        {<<"username">>, Name},
+                        {<<"realm">>, Realm},
+                        {<<"nonce">>, Nonce},
+                        {<<"uri">>, URI},
+                        {<<"algorithm">>, <<"MD5">>},
+                        {<<"response">>, Response},
+                        {<<"opaque">>, Opaque},
+                        {<<"qop">>, Qop},
+                        {<<"nc">>, Nc},
+                        {<<"cnonce">>, CNonce}
+                    ])
+                ],
+                State#state{nc = Nc0 + 1}
+            }
     end.
 
-set_status(#state{pid=Pid, ready=true}, Map) when is_pid(Pid) ->
+set_status(#state{pid = Pid, ready = true}, Map) when is_pid(Pid) ->
     Map#{status => <<"connected">>};
-set_status(#state{pid=Pid, ready=false}, Map) when is_pid(Pid) ->
+set_status(#state{pid = Pid, ready = false}, Map) when is_pid(Pid) ->
     Map#{status => <<"connecting">>};
-set_status(#state{pid=undefined}, Map) ->
+set_status(#state{pid = undefined}, Map) ->
     Map#{status => <<"disconnected">>}.
 
 % end of file

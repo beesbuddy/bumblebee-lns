@@ -5,8 +5,14 @@
 %
 -module(test_env).
 
--export([configure_ports/0, probe_socket_permissions/0, gateway_server/0, http_port/0, base_url/0,
-    wait_http_ready/0]).
+-export([
+    configure_ports/0,
+    probe_socket_permissions/0,
+    gateway_server/0,
+    http_port/0,
+    base_url/0,
+    wait_http_ready/0
+]).
 
 configure_ports() ->
     HttpPort = get_port_from_env("BUMBLEBEE_TEST_HTTP_PORT", tcp, 8080),
@@ -30,7 +36,7 @@ probe_socket_permissions() ->
 
 gateway_server() ->
     {ok, Port} = application:get_env(bumblebee, test_udp_port),
-    {{127,0,0,1}, Port}.
+    {{127, 0, 0, 1}, Port}.
 
 http_port() ->
     {ok, Port} = application:get_env(bumblebee, test_http_port),
