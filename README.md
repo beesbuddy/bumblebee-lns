@@ -109,6 +109,9 @@ release and run it manually or build the server from source codes.
 Follow the [Configuration Instructions](doc/Configuration.md) to correctly
 setup your server.
 
+If you need to expose UDP port 1680 for local network testing, see
+[Expose Udp during local development](doc/Expose-Udp-During-Local-Development.md).
+
 Run the bumblebee release by:
 ```bash
 cd bumblebee
@@ -117,6 +120,8 @@ bin/bumblebee
 
 Don't forget to set the server address and port (by default 1680) in the LoRaWAN
 gateways you want to use with the server.
+For temporary firewall opening during development, follow
+[doc/Expose-Udp-During-Local-Development.md](doc/Expose-Udp-During-Local-Development.md).
 
 You can terminate the bumblebee by:
 ```bash

@@ -632,7 +632,7 @@ check_failed(#connector{enabled = false}) ->
     undefined.
 
 node_deleted(DevAddr) ->
-    lager:debug("Node ~p deleted", [lorawan_utils:binary_to_hex(DevAddr)]),
+    _ = lager:debug("Node ~p deleted", [lorawan_utils:binary_to_hex(DevAddr)]),
     % delete linked records
     ok = mnesia:dirty_delete(pending, DevAddr),
     delete_matched(queued, #queued{frid = '$1', devaddr = DevAddr, _ = '_'}),

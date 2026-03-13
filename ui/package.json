@@ -1,0 +1,25 @@
+{
+  "name": "runlet-ui",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev --host",
+    "build:dev": "BUILD_OUT_DIR=dist-dev vite build --mode development",
+    "build:dev:watch": "BUILD_OUT_DIR=dist-dev vite build --mode development --watch",
+    "build:prod": "vite build --mode production",
+    "build": "npm run build:prod",
+    "preview": "vite preview --host"
+  },
+  "dependencies": {
+    "vue": "^3.4.26"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.0",
+    "autoprefixer": "^10.4.17",
+    "daisyui": "^4.11.1",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.3",
+    "vite": "^5.2.0"
+  }
+}

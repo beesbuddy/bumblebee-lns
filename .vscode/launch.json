@@ -6,6 +6,10 @@
       "type": "erlang",
       "request": "launch",
       "runinterminal": [
+        "BUMBLEBEE_DEV_RELOAD=1",
+        "BUMBLEBEE_FRONTEND_ENV=dev",
+        "BUMBLEBEE_FRONTEND_HOT=1",
+        "BUMBLEBEE_FRONTEND_DEV_PORT=5173",
         "rebar3",
         "shell",
         "--name",

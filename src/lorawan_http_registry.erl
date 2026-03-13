@@ -7,7 +7,7 @@
 -module(lorawan_http_registry).
 -behaviour(gen_server).
 
--export([start_link/0, update/2, delete/1, get/1, get_static/1, get_custom/1]).
+-export([start_link/0, update/2, delete/1, get/1, get_static/1, get_custom/1, get_frontend/2]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 -include("lorawan.hrl").
@@ -60,11 +60,15 @@ code_change(_OldVsn, State, _Extra) ->
 
 update_routes(State) ->
     Routes = join_entries(routes, State),
-    lager:debug("New routes ~p", [Routes]),
+    _ = lager:debug("New routes ~p", [Routes]),
+    FrontendRoot = bumblebee_frontend:asset_dir(),
+    UseDevServer = bumblebee_frontend:hot_mode_enabled() andalso bumblebee_frontend:mode() =:= dev,
     Dispatch =
         cowboy_router:compile([
             % static routes take precedence
-            {'_', get_static(routes) ++ Routes ++ get_custom(routes)}
+            {'_',
+                get_static(routes) ++ Routes ++ get_custom(routes) ++
+                    get_frontend(FrontendRoot, UseDevServer)}
         ]),
     Listen = ranch:info(),
     case {proplists:is_defined(http, Listen), proplists:is_defined(https, Listen)} of
@@ -211,15 +215,23 @@ custom_web([{URL, file, Path, Scope} | Dirs]) ->
         | custom_web(Dirs)
     ];
 custom_web([]) ->
-    AdminPath = application:get_env(bumblebee, http_admin_path, <<"/admin">>),
+    % AdminPath = application:get_env(bumblebee, http_admin_path, <<"/admin">>),
     % default icon
     [
         {"/favicon.ico", lorawan_admin_static,
             {priv_file, bumblebee, <<"favicon.ico">>,
                 % anyone, even a REST API may request favicon
-                [{'*', '*'}]}},
+                [{'*', '*'}]}}
         % last-chance redirection
-        {"/", lorawan_admin_redirect, #{path => AdminPath}}
+        % {"/", lorawan_admin_redirect, #{path => AdminPath}}
     ].
 
+get_frontend(FrontendRoot, UseDevServer) ->
+    [
+        {"/[...]", bumblebee_frontend_handler, #{
+            root => FrontendRoot,
+            use_dev_server => UseDevServer,
+            dev_server_origin => bumblebee_frontend:dev_server_origin()
+        }}
+    ].
 % end of file
