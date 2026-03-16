@@ -33,9 +33,9 @@ join_accept_integration_test_() ->
 
 setup() ->
     _ = application:start(mnesia),
-    _ = application:start(bumblebee),
+    _ = application:start('bumblebee-lns'),
     ok = test_env:configure_ports(),
-    {ok, _} = application:ensure_all_started(bumblebee),
+    {ok, _} = application:ensure_all_started('bumblebee-lns'),
     ok = test_env:wait_http_ready(),
     lager:set_loglevel(lager_console_backend, debug),
 
@@ -54,13 +54,13 @@ setup() ->
     #state{
         gateway = Gateway,
         node = Node,
-        appkey = lorawan_utils:hex_to_binary(?OTAA_APP_KEY_HEX)
+        appkey = bumblebee_utils:hex_to_binary(?OTAA_APP_KEY_HEX)
     }.
 
 cleanup(#state{gateway = Gateway, node = Node}) ->
     test_forwarder:stop(Gateway),
     test_mote:stop(Node),
-    application:stop(bumblebee),
+    application:stop('bumblebee-lns'),
     application:stop(mnesia).
 
 run(#state{gateway = Gateway, node = Node, appkey = AppKey}) ->
@@ -100,9 +100,9 @@ send_join_until_accept(Gateway, AppKey, Nonce, Retries) ->
 join_request_payload(AppKey, DevNonce) ->
     MHDR = <<2#000:3, 0:3, 0:2>>,
     Msg =
-        <<MHDR/binary, (lorawan_utils:reverse(?OTAA_APP_EUI))/binary,
-            (lorawan_utils:reverse(?OTAA_DEV_EUI))/binary, DevNonce/binary>>,
-    MIC = lorawan_compat:cmac_n(AppKey, Msg, 4),
+        <<MHDR/binary, (bumblebee_utils:reverse(?OTAA_APP_EUI))/binary,
+            (bumblebee_utils:reverse(?OTAA_DEV_EUI))/binary, DevNonce/binary>>,
+    MIC = bumblebee_compat:cmac_n(AppKey, Msg, 4),
     <<Msg/binary, MIC/binary>>.
 
 join_accept_received({ok, Resp64}) when is_binary(Resp64) ->

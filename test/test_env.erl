@@ -18,12 +18,12 @@ configure_ports() ->
     HttpPort = get_port_from_env("BUMBLEBEE_TEST_HTTP_PORT", tcp, 8080),
     UdpPort = get_port_from_env("BUMBLEBEE_TEST_UDP_PORT", udp, 1680),
 
-    application:set_env(bumblebee, http_admin_listen, [{port, HttpPort}]),
-    application:set_env(bumblebee, http_admin_listen_ssl, []),
-    application:set_env(bumblebee, http_admin_redirect_ssl, false),
-    application:set_env(bumblebee, packet_forwarder_listen, [{port, UdpPort}]),
-    application:set_env(bumblebee, test_http_port, HttpPort),
-    application:set_env(bumblebee, test_udp_port, UdpPort),
+    application:set_env('bumblebee-lns', http_admin_listen, [{port, HttpPort}]),
+    application:set_env('bumblebee-lns', http_admin_listen_ssl, []),
+    application:set_env('bumblebee-lns', http_admin_redirect_ssl, false),
+    application:set_env('bumblebee-lns', packet_forwarder_listen, [{port, UdpPort}]),
+    application:set_env('bumblebee-lns', test_http_port, HttpPort),
+    application:set_env('bumblebee-lns', test_udp_port, UdpPort),
     ok.
 
 probe_socket_permissions() ->
@@ -35,11 +35,11 @@ probe_socket_permissions() ->
     end.
 
 gateway_server() ->
-    {ok, Port} = application:get_env(bumblebee, test_udp_port),
+    {ok, Port} = application:get_env('bumblebee-lns', test_udp_port),
     {{127, 0, 0, 1}, Port}.
 
 http_port() ->
-    {ok, Port} = application:get_env(bumblebee, test_http_port),
+    {ok, Port} = application:get_env('bumblebee-lns', test_http_port),
     Port.
 
 base_url() ->
@@ -83,7 +83,7 @@ wait_http_ready(0) ->
 wait_http_ready(Retries) ->
     case listener_port() of
         {ok, Port} ->
-            application:set_env(bumblebee, test_http_port, Port),
+            application:set_env('bumblebee-lns', test_http_port, Port),
             case probe_http_port(Port) of
                 ok ->
                     ok;

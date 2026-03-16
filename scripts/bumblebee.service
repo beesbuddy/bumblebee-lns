@@ -1,13 +1,13 @@
 [Unit]
-Description=Bumblebee
+Description=Bumblebee LNS
 After=network.target
 
 [Service]
 Type=simple
-Environment=LORAWAN_HOME=/var/lib/bumblebee
-Environment=LORAWAN_LOG_ROOT=/var/log/bumblebee
-ExecStart=/usr/lib/bumblebee/bin/bumblebee
-ExecStop=/usr/lib/bumblebee/bin/lorawanctl stop
+Environment=BUMBLEBEE_LNS_HOME=/var/lib/bumblebee-lns
+Environment=BUMBLEBEE_LNS_LOG_ROOT=/var/log/bumblebee-lns
+ExecStart=/usr/lib/bumblebee-lns/bin/bumblebee-lns
+ExecStop=/usr/lib/bumblebee-lns/bin/lorawanctl stop
 User=lorawan
 
 [Install]

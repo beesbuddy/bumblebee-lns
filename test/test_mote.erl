@@ -11,8 +11,8 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 -record(state, {devaddr, nwkskey, appskey, gateway, client, send_status}).
--import(lorawan_mac, [cipher/5, b0/4]).
--import(lorawan_utils, [reverse/1]).
+-import(bumblebee_mac, [cipher/5, b0/4]).
+-import(bumblebee_utils, [reverse/1]).
 
 -include_lib("eunit/include/eunit.hrl").
 
@@ -41,7 +41,7 @@ init([DevCfg, Gateway]) ->
     }}.
 
 get_config({DevAddr, NwkSKey, AppSKey}) ->
-    {DevAddr, lorawan_utils:hex_to_binary(NwkSKey), lorawan_utils:hex_to_binary(AppSKey)}.
+    {DevAddr, bumblebee_utils:hex_to_binary(NwkSKey), bumblebee_utils:hex_to_binary(AppSKey)}.
 
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
@@ -105,7 +105,7 @@ encode_frame(
                 <<FHDR/binary, FPort:8, (reverse(FRMPayload))/binary>>
         end,
     Msg = <<MType:3, 0:3, 0:2, MACPayload/binary>>,
-    MIC = lorawan_compat:cmac_n(
+    MIC = bumblebee_compat:cmac_n(
         NwkSKey, <<(b0(MType band 1, DevAddr, FCnt, byte_size(Msg)))/binary, Msg/binary>>, 4
     ),
     <<Msg/binary, MIC/binary>>.
@@ -129,7 +129,7 @@ process_frame0(
         end,
     DevAddr = reverse(DevAddr0),
     case
-        lorawan_compat:cmac_n(
+        bumblebee_compat:cmac_n(
             NwkSKey, <<(b0(MType band 1, DevAddr, FCnt, byte_size(Msg)))/binary, Msg/binary>>, 4
         )
     of

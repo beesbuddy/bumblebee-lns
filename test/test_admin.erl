@@ -15,7 +15,7 @@ add_area(AreaName) ->
 
 add_gateway(AreaName, MAC) ->
     post_json("gateways", [
-        {mac, lorawan_utils:binary_to_hex(MAC)},
+        {mac, bumblebee_utils:binary_to_hex(MAC)},
         {area, AreaName},
         {tx_rfch, 0},
         {gpspos, [{lat, 0}, {lon, 0}]},
@@ -52,7 +52,7 @@ add_profile(GroupName, ProfName) ->
 
 add_node(ProfName, {DevAddr, NwkSKey, AppSKey}) ->
     post_json("nodes", [
-        {devaddr, lorawan_utils:binary_to_hex(DevAddr)},
+        {devaddr, bumblebee_utils:binary_to_hex(DevAddr)},
         {profile, ProfName},
         {nwkskey, NwkSKey},
         {appskey, AppSKey},
@@ -67,9 +67,9 @@ add_node(ProfName, {DevAddr, NwkSKey, AppSKey}) ->
 
 add_device(ProfName, {DevEUI, AppEUI, AppKey}) ->
     post_json("devices", [
-        {deveui, lorawan_utils:binary_to_hex(DevEUI)},
+        {deveui, bumblebee_utils:binary_to_hex(DevEUI)},
         {profile, ProfName},
-        {appeui, lorawan_utils:binary_to_hex(AppEUI)},
+        {appeui, bumblebee_utils:binary_to_hex(AppEUI)},
         {appkey, AppKey}
     ]).
 

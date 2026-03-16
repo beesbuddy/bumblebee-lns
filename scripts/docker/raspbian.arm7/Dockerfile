@@ -24,6 +24,6 @@ VOLUME /storage
 EXPOSE 1680/udp
 # admin interface
 EXPOSE 8080/tcp
-ENV LORAWAN_HOME=/storage
+ENV BUMBLEBEE_LNS_HOME=/storage
 WORKDIR /bumblebee
-CMD bin/bumblebee
+CMD bin/bumblebee-lns

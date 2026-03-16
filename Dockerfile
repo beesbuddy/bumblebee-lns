@@ -20,11 +20,11 @@ EXPOSE 8443/tcp
 
 # volume for the mnesia database and logs
 VOLUME /storage
-ENV LORAWAN_HOME=/storage
+ENV BUMBLEBEE_LNS_HOME=/storage
 
 # Base directory
-WORKDIR /usr/lib/bumblebee
-CMD bin/bumblebee
+WORKDIR /usr/lib/bumblebee-lns
+CMD bin/bumblebee-lns
 
 ## Changes with every rebuild
 COPY --from=scratch /bumblebee/_build/default/rel/ /usr/lib/

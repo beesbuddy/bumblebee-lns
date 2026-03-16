@@ -2,8 +2,8 @@ USER=lorawan
 
 case "$1" in
     remove|purge)
-    systemctl disable bumblebee
-    rm -rf /var/log/bumblebee
+    systemctl disable bumblebee-lns
+    rm -rf /var/log/bumblebee-lns
     id -u $USER >/dev/null 2>&1 && userdel -r $USER
     ;;
 

@@ -62,10 +62,10 @@ bin/bumblebee
 
 By default the database directory `Mnesia.lorawan@*` is stored in
 the `bumblebee` directory you created. If you want to store the run-time
-information to another directory, set the `LORAWAN_HOME` environment variable.
+information to another directory, set the `BUMBLEBEE_LNS_HOME` environment variable.
 
 The `log` files are by default stored in the same directory. If you want to
-store the log files elsewhere, set the `LORAWAN_LOG_ROOT` variable.
+store the log files elsewhere, set the `BUMBLEBEE_LNS_LOG_ROOT` variable.
 
 The bumblebee can be started in background as a daemon.
 On Linux systems with systemd you should:
@@ -123,7 +123,7 @@ These files are either:
 The server run-time files are automatically created during the first run. It
 includes the database in `Mnesia.lorawan@*` and `log` files. These files are either:
  * In `/var/lib/bumblebee` when using the official releases
- * In the directory specified by the `LORAWAN_HOME` environment variable
+ * In the directory specified by the `BUMBLEBEE_LNS_HOME` environment variable
  * Otherwise it is in the same directory as the server binaries
 
 To upgrade your server binaries:

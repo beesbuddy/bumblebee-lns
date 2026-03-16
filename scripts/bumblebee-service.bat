@@ -25,7 +25,7 @@ for /D %%A in ("%ROOT_DIR%\lib\*") do (
     set FILES=!FILES! "%%A\ebin"
 )
 
-%ERLSRV% add "Bumblebee" -w "%ROOT_DIR%" -sname bumblebee -ar "+Bd -pa !FILES! -s lorawan_app -config releases\{{release_version}}\sys.config" -c "Handles packets received by LoRaWAN gateways"
+%ERLSRV% add "Bumblebee" -w "%ROOT_DIR%" -sname bumblebee -ar "+Bd -pa !FILES! -s bumblebee_app -config releases\{{release_version}}\sys.config" -c "Handles packets received by LoRaWAN gateways"
 goto END
 
 :MISSING

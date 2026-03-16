@@ -2,8 +2,8 @@ USER=lorawan
 
 case "$1" in
     configure)
-    id -u $USER >/dev/null 2>&1 || useradd --home-dir /var/lib/bumblebee --create-home $USER
-    mkdir -p /var/log/bumblebee && chown $USER:$USER /var/log/bumblebee
+    id -u $USER >/dev/null 2>&1 || useradd --home-dir /var/lib/bumblebee-lns --create-home $USER
+    mkdir -p /var/log/bumblebee-lns && chown $USER:$USER /var/log/bumblebee-lns
     ;;
 
     *)
