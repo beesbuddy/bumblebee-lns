@@ -26,4 +26,4 @@ EXPOSE 1680/udp
 EXPOSE 8080/tcp
 ENV BUMBLEBEE_LNS_HOME=/storage
 WORKDIR /bumblebee
-CMD bin/bumblebee-lns
+CMD bin/bumblebee_lns

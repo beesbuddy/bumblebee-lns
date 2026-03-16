@@ -44,7 +44,7 @@ stop_connector(Id) ->
 init(Req, [#connector{connid = Id} = Connector, Type]) ->
     case authorize(Req, Connector) of
         {ok, Bindings} ->
-            {ok, Timeout} = application:get_env('bumblebee-lns', websocket_timeout),
+            {ok, Timeout} = application:get_env('bumblebee_lns', websocket_timeout),
             {cowboy_websocket, Req,
                 #state{
                     conn = Connector, type = Type, path = cowboy_req:path(Req), bindings = Bindings

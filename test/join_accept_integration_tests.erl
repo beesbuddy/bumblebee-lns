@@ -33,9 +33,9 @@ join_accept_integration_test_() ->
 
 setup() ->
     _ = application:start(mnesia),
-    _ = application:start('bumblebee-lns'),
+    _ = application:start('bumblebee_lns'),
     ok = test_env:configure_ports(),
-    {ok, _} = application:ensure_all_started('bumblebee-lns'),
+    {ok, _} = application:ensure_all_started('bumblebee_lns'),
     ok = test_env:wait_http_ready(),
     lager:set_loglevel(lager_console_backend, debug),
 
@@ -60,7 +60,7 @@ setup() ->
 cleanup(#state{gateway = Gateway, node = Node}) ->
     test_forwarder:stop(Gateway),
     test_mote:stop(Node),
-    application:stop('bumblebee-lns'),
+    application:stop('bumblebee_lns'),
     application:stop(mnesia).
 
 run(#state{gateway = Gateway, node = Node, appkey = AppKey}) ->

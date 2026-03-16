@@ -15,7 +15,7 @@ start_link() ->
     supervisor:start_link(?MODULE, []).
 
 init([]) ->
-    {ok, PktFwdOpts} = application:get_env('bumblebee-lns', packet_forwarder_listen),
+    {ok, PktFwdOpts} = application:get_env('bumblebee_lns', packet_forwarder_listen),
     {ok,
         {{one_for_one, 2, 10}, [
             {gateway_router, {bumblebee_gw_router, start_link, []}, permanent, 5000, worker, [

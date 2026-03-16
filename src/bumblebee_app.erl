@@ -13,11 +13,11 @@
 -export([start/2, stop/1]).
 
 start() ->
-    {ok, _Started} = application:ensure_all_started('bumblebee-lns').
+    {ok, _Started} = application:ensure_all_started('bumblebee_lns').
 
 start(_Type, _Args) ->
     ok = ensure_erlang_version(26),
-    ok = log(debug, "Using config: ~p", [application:get_all_env('bumblebee-lns')]),
+    ok = log(debug, "Using config: ~p", [application:get_all_env('bumblebee_lns')]),
 
     bumblebee_db:ensure_tables(),
 
@@ -34,7 +34,7 @@ start(_Type, _Args) ->
 
     case
         start_listeners(
-            application:get_env('bumblebee-lns', http_admin_listen, []),
+            application:get_env('bumblebee_lns', http_admin_listen, []),
             retrieve_valid_ssl(),
             FrontendRoot,
             UseDevServer
@@ -60,7 +60,7 @@ start_listeners(HttpOpts, SslOpts, FrontendRoot, UseDevServer) ->
                 ok ->
                     start_http(
                         HttpOpts,
-                        case application:get_env('bumblebee-lns', http_admin_redirect_ssl, true) of
+                        case application:get_env('bumblebee_lns', http_admin_redirect_ssl, true) of
                             false ->
                                 normal_dispatch(FrontendRoot, UseDevServer);
                             true ->
@@ -73,7 +73,7 @@ start_listeners(HttpOpts, SslOpts, FrontendRoot, UseDevServer) ->
     end.
 
 retrieve_valid_ssl() ->
-    case application:get_env('bumblebee-lns', http_admin_listen_ssl, []) of
+    case application:get_env('bumblebee_lns', http_admin_listen_ssl, []) of
         [] ->
             [];
         Config ->

@@ -80,7 +80,7 @@ update_routes(State) ->
             cowboy:set_env(https, dispatch, Dispatch);
         {true, true} ->
             cowboy:set_env(https, dispatch, Dispatch),
-            case application:get_env('bumblebee-lns', http_admin_redirect_ssl, true) of
+            case application:get_env('bumblebee_lns', http_admin_redirect_ssl, true) of
                 false ->
                     cowboy:set_env(http, dispatch, Dispatch);
                 true ->
@@ -185,7 +185,7 @@ get_static(routes) ->
                 {[{<<"device:read">>, '*'}], [{<<"device:write">>, '*'}]}}},
         {"/api/upload", bumblebee_admin_upload, {[], [{<<"backend:write">>, '*'}]}},
         {"/admin", bumblebee_admin_static,
-            {priv_file, 'bumblebee-lns', <<"admin/index.html">>, [{<<"web-admin">>, '*'}]}},
+            {priv_file, 'bumblebee_lns', <<"admin/index.html">>, [{<<"web-admin">>, '*'}]}},
         {"/admin/timeline", bumblebee_admin_timeline, [{<<"web-admin">>, '*'}]},
         {"/admin/admin-config.js", bumblebee_admin_config_js, [{<<"web-admin">>, '*'}]},
         {"/admin/sgraph/:sname", bumblebee_admin_graph_server, [{<<"server:read">>, '*'}]},
@@ -195,14 +195,14 @@ get_static(routes) ->
         {"/admin/qgraph/:devaddr", bumblebee_admin_graph_rx, {qgraph, [{<<"device:read">>, '*'}]}},
         {"/admin/ngraph/:devaddr", bumblebee_admin_graph_node, [{<<"device:read">>, '*'}]},
         {"/admin/[...]", bumblebee_admin_static,
-            {priv_dir, 'bumblebee-lns', <<"admin">>, [{<<"web-admin">>, '*'}]}}
+            {priv_dir, 'bumblebee_lns', <<"admin">>, [{<<"web-admin">>, '*'}]}}
     ].
 
 get_custom(scopes) ->
     [];
 get_custom(routes) ->
     % serve custom web-pages
-    custom_web(application:get_env('bumblebee-lns', http_custom_web, [])).
+    custom_web(application:get_env('bumblebee_lns', http_custom_web, [])).
 
 custom_web([{URL, dir, Path, Scope} | Dirs]) ->
     [
@@ -215,11 +215,11 @@ custom_web([{URL, file, Path, Scope} | Dirs]) ->
         | custom_web(Dirs)
     ];
 custom_web([]) ->
-    % AdminPath = application:get_env('bumblebee-lns', http_admin_path, <<"/admin">>),
+    % AdminPath = application:get_env('bumblebee_lns', http_admin_path, <<"/admin">>),
     % default icon
     [
         {"/favicon.ico", bumblebee_admin_static,
-            {priv_file, 'bumblebee-lns', <<"favicon.ico">>,
+            {priv_file, 'bumblebee_lns', <<"favicon.ico">>,
                 % anyone, even a REST API may request favicon
                 [{'*', '*'}]}}
         % last-chance redirection

@@ -45,7 +45,7 @@
     )
 ).
 
--define(REALM, <<"bumblebee-lns">>).
+-define(REALM, <<"bumblebee_lns">>).
 
 -record(config, {
     name :: nonempty_string(),

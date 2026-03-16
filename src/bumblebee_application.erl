@@ -46,7 +46,7 @@
     ok.
 
 init() ->
-    Modules = application:get_env('bumblebee-lns', applications, []),
+    Modules = application:get_env('bumblebee_lns', applications, []),
     do_init(Modules, []).
 
 do_init([], Acc) ->

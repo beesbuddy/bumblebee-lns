@@ -4,7 +4,7 @@
 % All rights reserved.
 % Distributed under the terms of the MIT License. See the LICENSE file.
 %
-{application, 'bumblebee-lns',
+{application, 'bumblebee_lns',
     [{description, "LoRaWAN Application Server"},
     {vsn, "0.7.0"},
     {modules, []},

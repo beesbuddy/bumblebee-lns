@@ -46,7 +46,7 @@ content_types_provided(Req, State) ->
 handle_get(Req, State) ->
     [#config{items_per_page = Items}] =
         mnesia:dirty_read(config, <<"main">>),
-    {ok, TileServer} = application:get_env('bumblebee-lns', map_tile_server),
+    {ok, TileServer} = application:get_env('bumblebee_lns', map_tile_server),
     {
         variable(
             <<"NodeName">>,

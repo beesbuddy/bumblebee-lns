@@ -19,7 +19,7 @@ ensure_tables() ->
         true ->
             ok;
         false ->
-            case application:get_env('bumblebee-lns', db_master) of
+            case application:get_env('bumblebee_lns', db_master) of
                 undefined ->
                     % this is the very first node starting
                     stopped = mnesia:stop(),
@@ -320,7 +320,7 @@ set_defaults(config) ->
     mnesia:dirty_write(#config{name = <<"main">>, items_per_page = 30});
 set_defaults(user) ->
     lager:info("Database create default username:password"),
-    {ok, {User, Pass}} = application:get_env('bumblebee-lns', http_admin_credentials),
+    {ok, {User, Pass}} = application:get_env('bumblebee_lns', http_admin_credentials),
     mnesia:dirty_write(#user{
         name = User,
         pass_ha1 = bumblebee_http_digest:ha1({User, ?REALM, Pass})
@@ -331,7 +331,7 @@ set_defaults(_Else) ->
     ok.
 
 ensure_configured_admin_user() ->
-    case application:get_env('bumblebee-lns', http_admin_credentials) of
+    case application:get_env('bumblebee_lns', http_admin_credentials) of
         {ok, {User, Pass}} ->
             HA1 = bumblebee_http_digest:ha1({User, ?REALM, Pass}),
             case mnesia:dirty_read(user, User) of
@@ -443,7 +443,7 @@ leave_cluster(NodeName) ->
     end.
 
 join(NodeName) ->
-    application:stop('bumblebee-lns'),
+    application:stop('bumblebee_lns'),
     application:stop(mnesia),
     mnesia:delete_schema([node()]),
     application:start(mnesia),
@@ -455,7 +455,7 @@ join(NodeName) ->
              || T <- mnesia:system_info(tables) -- [schema]
             ],
             ok = mnesia:wait_for_tables(mnesia:system_info(local_tables), 10000),
-            application:start('bumblebee-lns');
+            application:start('bumblebee_lns');
         {error, Reason} ->
             lager:error("Cluster copy schema: ~p", [Reason]),
             {error, Reason}
@@ -465,7 +465,7 @@ leave([], NodeName) ->
     lager:error("Node ~s is not in cluster", [NodeName]),
     {error, {no_cluster, NodeName}};
 leave([Master | _], NodeName) ->
-    application:stop('bumblebee-lns'),
+    application:stop('bumblebee_lns'),
     application:stop(mnesia),
     rpc:call(Master, mnesia, del_table_copy, [schema, NodeName]),
     mnesia:delete_schema([node()]),

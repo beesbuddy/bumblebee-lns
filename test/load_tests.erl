@@ -24,10 +24,10 @@
 load_test_() ->
     {setup,
         fun() ->
-            _ = application:stop('bumblebee-lns'),
+            _ = application:stop('bumblebee_lns'),
             _ = application:stop(mnesia),
             ok = test_env:configure_ports(),
-            {ok, _} = application:ensure_all_started('bumblebee-lns'),
+            {ok, _} = application:ensure_all_started('bumblebee_lns'),
             ok = test_env:wait_http_ready(),
             lager:set_loglevel(lager_console_backend, debug),
             test_admin:add_area(?AREA),
@@ -76,7 +76,7 @@ load_test_() ->
                 end,
                 Nodes
             ),
-            application:stop('bumblebee-lns'),
+            application:stop('bumblebee_lns'),
             application:stop(mnesia)
         end,
         fun load_test/1}.

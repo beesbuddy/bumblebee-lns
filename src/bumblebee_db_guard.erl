@@ -26,7 +26,7 @@ init([]) ->
     ok = mnesia:wait_for_tables([node], 2000),
     {ok, _} = mnesia:subscribe({table, node, simple}),
     {ok, _} = timer:send_interval(1000, monitor),
-    {ok, TrimInterval} = application:get_env('bumblebee-lns', trim_interval),
+    {ok, TrimInterval} = application:get_env('bumblebee_lns', trim_interval),
     {ok, _} = timer:send_interval(TrimInterval * 1000, trim_tables),
     {ok, undefined}.
 
@@ -333,7 +333,7 @@ send_alert(Admins, Channel, Type, ID, NewAlerts, OtherAlerts, Decay) ->
     end.
 
 stringify_url(Prefix, Type, ID) ->
-    AdminPath = application:get_env('bumblebee-lns', http_admin_path, <<"/admin">>),
+    AdminPath = application:get_env('bumblebee_lns', http_admin_path, <<"/admin">>),
     io_lib:format("~s/~s#/~ss/edit/~s", [Prefix, AdminPath, Type, ID]).
 
 stringify_alerts(Alerts) ->
@@ -495,8 +495,8 @@ send_slack_raw(Token, Channel, Message) ->
         as_user => true
     },
     % send HTTP POST
-    {ok, {Host, Port}} = application:get_env('bumblebee-lns', slack_server),
-    Opts = application:get_env('bumblebee-lns', ssl_options, []),
+    {ok, {Host, Port}} = application:get_env('bumblebee_lns', slack_server),
+    Opts = application:get_env('bumblebee_lns', ssl_options, []),
     {ok, ConnPid} = gun:open(Host, Port, #{transport => ssl, transport_opts => Opts}),
     Success =
         case gun:await_up(ConnPid) of
@@ -647,7 +647,7 @@ delete_matched(Table, Record) ->
     ).
 
 trim_rxframes() ->
-    {ok, Count} = application:get_env('bumblebee-lns', retained_rxframes),
+    {ok, Count} = application:get_env('bumblebee_lns', retained_rxframes),
     Trimmed = lists:filter(
         fun(D) ->
             {Uplinks, Downlinks} = bumblebee_db:get_rxframes(D),
@@ -690,7 +690,7 @@ purge_queued(DevAddr) ->
     ).
 
 expired_events() ->
-    {ok, AgeSeconds} = application:get_env('bumblebee-lns', event_lifetime),
+    {ok, AgeSeconds} = application:get_env('bumblebee_lns', event_lifetime),
     ETime = calendar:gregorian_seconds_to_datetime(
         calendar:datetime_to_gregorian_seconds(calendar:universal_time()) - AgeSeconds
     ),

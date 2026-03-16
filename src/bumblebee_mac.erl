@@ -334,7 +334,7 @@ load_profile(ProfID) ->
     end.
 
 check_fcnt({Network, Profile, Node}, FCnt) ->
-    {ok, MaxLost} = application:get_env('bumblebee-lns', max_lost_after_reset),
+    {ok, MaxLost} = application:get_env('bumblebee_lns', max_lost_after_reset),
     if
         Node#node.fcntup == undefined ->
             % first frame after join

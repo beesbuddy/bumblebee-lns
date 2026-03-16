@@ -119,7 +119,7 @@ load_user_credentials(User) ->
     end.
 
 configured_user_credentials(User) ->
-    case application:get_env('bumblebee-lns', http_admin_credentials) of
+    case application:get_env('bumblebee_lns', http_admin_credentials) of
         {ok, {User, Pass}} ->
             {ok, bumblebee_http_digest:ha1({User, ?REALM, Pass}), undefined};
         _Else ->
@@ -127,7 +127,7 @@ configured_user_credentials(User) ->
     end.
 
 normalize_auth_scopes(User, []) ->
-    case application:get_env('bumblebee-lns', http_admin_credentials) of
+    case application:get_env('bumblebee_lns', http_admin_credentials) of
         {ok, {User, _Pass}} ->
             % backward-compatible access for configured default admin
             undefined;

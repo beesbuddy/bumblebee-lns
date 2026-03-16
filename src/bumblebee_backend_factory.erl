@@ -135,7 +135,7 @@ stop_connector(#connector{}) ->
 find_module(Uri) ->
     case binary:split(Uri, [<<":">>]) of
         [Scheme | _] ->
-            Known = application:get_env('bumblebee-lns', connectors, []),
+            Known = application:get_env('bumblebee_lns', connectors, []),
             find_module0(Scheme, Known);
         _Else ->
             {error, invalid_uri}

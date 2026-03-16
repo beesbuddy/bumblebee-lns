@@ -202,7 +202,7 @@ choose_tx({Network, #profile{txwin = 1}, Node}, RxQ, _Timestamp) ->
 choose_tx({Network, #profile{txwin = 2}, Node}, _RxQ, _Timestamp) ->
     bumblebee_mac_region:rx2_window(Network, Node);
 choose_tx({#network{rx1_delay = Rx1Delay} = Network, _Profile, Node}, RxQ, TimeStamp) ->
-    {ok, GwDelay} = application:get_env('bumblebee-lns', gateway_delay),
+    {ok, GwDelay} = application:get_env('bumblebee_lns', gateway_delay),
     % transmit as soon as possible
     case erlang:monotonic_time(milli_seconds) - TimeStamp of
         Small when Small < Rx1Delay * 1000 - GwDelay ->
@@ -307,7 +307,7 @@ code_change(_OldVsn, State, Data, _Extra) ->
     {ok, State, Data}.
 
 invoke_handler(Fun, {_, #profile{app = App}, _} = Subject, Params) ->
-    {ok, Modules} = application:get_env('bumblebee-lns', applications),
+    {ok, Modules} = application:get_env('bumblebee_lns', applications),
     case proplists:get_value(App, Modules) of
         undefined ->
             % if it's not internal, then it must be external

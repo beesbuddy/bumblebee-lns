@@ -23,7 +23,7 @@ init0(Req, Table, Fields, Module, AuthFields) ->
     Match = list_to_tuple([Table | [maps:get(X, Filter, '_') || X <- Fields]]),
     % convert to websocket
     lager:debug("Feed ~p connected ~p", [Table, cowboy_req:peer(Req)]),
-    {ok, Timeout} = application:get_env('bumblebee-lns', websocket_timeout),
+    {ok, Timeout} = application:get_env('bumblebee_lns', websocket_timeout),
     {cowboy_websocket, Req,
         #state{
             table = Table, fields = Fields, module = Module, match = Match, auth_fields = AuthFields

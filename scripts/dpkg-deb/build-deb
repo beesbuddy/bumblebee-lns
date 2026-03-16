@@ -4,25 +4,25 @@ if [ -z $SCRIPT ]; then
 fi
 SCRIPT_DIR="$(cd `dirname "$SCRIPT"` && pwd -P)"
 
-REL=${SCRIPT_DIR}/../../_build/default/rel/bumblebee-lns
+REL=${SCRIPT_DIR}/../../_build/default/rel/bumblebee_lns
 VERSION=`find ${REL}/releases -type d -name "*.*.*" -printf "%f\n" | sort | tail -1`
 REVISION=1
 
-ROOT=/tmp/bumblebee-lns_${VERSION}-${REVISION}_all
+ROOT=/tmp/bumblebee_lns_${VERSION}-${REVISION}_all
 
-mkdir -p $ROOT/usr/lib/bumblebee-lns
-rsync -trLp $REL/bin $REL/lib $REL/releases $ROOT/usr/lib/bumblebee-lns
+mkdir -p $ROOT/usr/lib/bumblebee_lns
+rsync -trLp $REL/bin $REL/lib $REL/releases $ROOT/usr/lib/bumblebee_lns
 
 mkdir -p $ROOT/lib/systemd/system
-rsync -tp $REL/bin/bumblebee-lns.service $ROOT/lib/systemd/system
+rsync -tp $REL/bin/bumblebee_lns.service $ROOT/lib/systemd/system
 
 sed "s/<VERSION>/${VERSION}/" < ${SCRIPT_DIR}/control.template > ${SCRIPT_DIR}/control
 sed "s/<VERSION>/${VERSION}/" < ${SCRIPT_DIR}/conffiles.template > ${SCRIPT_DIR}/conffiles
 mkdir -p $ROOT/DEBIAN
 rsync -tp ${SCRIPT_DIR}/control ${SCRIPT_DIR}/conffiles ${SCRIPT_DIR}/postinst ${SCRIPT_DIR}/postrm $ROOT/DEBIAN
 
-mkdir -p $ROOT/usr/share/doc/bumblebee-lns
-rsync -tp ${SCRIPT_DIR}/../../LICENSE $ROOT/usr/share/doc/bumblebee-lns/copyright
+mkdir -p $ROOT/usr/share/doc/bumblebee_lns
+rsync -tp ${SCRIPT_DIR}/../../LICENSE $ROOT/usr/share/doc/bumblebee_lns/copyright
 
 fakeroot dpkg-deb --build $ROOT $REL
 rm -rf $ROOT

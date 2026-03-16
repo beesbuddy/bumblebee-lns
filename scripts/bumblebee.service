@@ -4,10 +4,10 @@ After=network.target
 
 [Service]
 Type=simple
-Environment=BUMBLEBEE_LNS_HOME=/var/lib/bumblebee-lns
-Environment=BUMBLEBEE_LNS_LOG_ROOT=/var/log/bumblebee-lns
-ExecStart=/usr/lib/bumblebee-lns/bin/bumblebee-lns
-ExecStop=/usr/lib/bumblebee-lns/bin/lorawanctl stop
+Environment=BUMBLEBEE_LNS_HOME=/var/lib/bumblebee_lns
+Environment=BUMBLEBEE_LNS_LOG_ROOT=/var/log/bumblebee_lns
+ExecStart=/usr/lib/bumblebee_lns/bin/bumblebee_lns
+ExecStop=/usr/lib/bumblebee_lns/bin/lorawanctl stop
 User=lorawan
 
 [Install]

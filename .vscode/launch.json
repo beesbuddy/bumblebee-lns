@@ -17,7 +17,7 @@
         "--setcookie",
         "COOKIE",
         "--eval",
-        "application:ensure_all_started(bumblebee)."
+        "application:ensure_all_started(bumblebee_lns)."
       ],
       "projectnode": "dapnode@localhost",
       "cookie": "COOKIE",

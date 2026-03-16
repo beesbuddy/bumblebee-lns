@@ -52,7 +52,7 @@ value_or_default(Num, _Def) when is_number(Num) -> Num;
 value_or_default(_Num, Def) -> Def.
 
 init([]) ->
-    {ok, Interval} = application:get_env('bumblebee-lns', server_stats_interval),
+    {ok, Interval} = application:get_env('bumblebee_lns', server_stats_interval),
     timer:send_interval(Interval * 1000, submit_stats),
     {ok, #state{gateways = dict:new(), recent = dict:new(), request_cnt = 0, error_cnt = 0}}.
 
@@ -337,7 +337,7 @@ handle_uplink0({GWData, PHYPayload}, #state{recent = Recent, request_cnt = Cnt} 
             % lager:debug("--> datr ~s, codr ~s, tmst ~B, size ~B", [RxQ#rxq.datr, RxQ#rxq.codr, RxQ#rxq.tmst, byte_size(PHYPayload)]),
             gen_server:cast(Handler, {frame, GWData, PHYPayload}),
             % schedule signal quality info
-            {ok, Delay} = application:get_env('bumblebee-lns', deduplication_delay),
+            {ok, Delay} = application:get_env('bumblebee_lns', deduplication_delay),
             {ok, _} = timer:send_after(Delay, {rxq_ready, PHYPayload}),
             State#state{
                 recent = dict:store(PHYPayload, {[GWData], Handler}, Recent), request_cnt = Cnt + 1

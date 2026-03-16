@@ -23,8 +23,8 @@ VOLUME /storage
 ENV BUMBLEBEE_LNS_HOME=/storage
 
 # Base directory
-WORKDIR /usr/lib/bumblebee-lns
-CMD bin/bumblebee-lns
+WORKDIR /usr/lib/bumblebee_lns
+CMD bin/bumblebee_lns
 
 ## Changes with every rebuild
 COPY --from=scratch /bumblebee/_build/default/rel/ /usr/lib/

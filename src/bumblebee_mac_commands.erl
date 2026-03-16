@@ -58,7 +58,7 @@ handle_fopts0({Network, Profile, Node0}, Gateways, FOptsIn) ->
             )
         )
     ),
-    {ok, FramesRequired} = application:get_env('bumblebee-lns', frames_before_adr),
+    {ok, FramesRequired} = application:get_env('bumblebee_lns', frames_before_adr),
     % maintain quality statistics
     {_, RxQ} = hd(Gateways),
     {LastQs, AverageQs} = append_qs(
@@ -590,7 +590,7 @@ request_status(
     #node{devstat = Stats, devstat_time = LastDate, devstat_fcnt = LastFCnt} = Node,
     FOptsOut
 ) ->
-    {ok, {MaxTime, MaxFCnt}} = application:get_env('bumblebee-lns', devstat_gap),
+    {ok, {MaxTime, MaxFCnt}} = application:get_env('bumblebee_lns', devstat_gap),
     TimeDiff =
         calendar:datetime_to_gregorian_seconds(calendar:universal_time()) -
             calendar:datetime_to_gregorian_seconds(LastDate),

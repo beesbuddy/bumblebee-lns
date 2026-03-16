@@ -44,7 +44,7 @@ downlink(MAC) ->
 %% gen_server Callbacks
 init([]) ->
     State =
-        case application:get_env('bumblebee-lns', enable_prometheus, false) of
+        case application:get_env('bumblebee_lns', enable_prometheus, false) of
             false ->
                 #state{enabled = false};
             true ->

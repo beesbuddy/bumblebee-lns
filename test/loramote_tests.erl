@@ -29,10 +29,10 @@
 loramote_test_() ->
     {setup,
         fun() ->
-            _ = application:stop('bumblebee-lns'),
+            _ = application:stop('bumblebee_lns'),
             _ = application:stop(mnesia),
             ok = test_env:configure_ports(),
-            {ok, _} = application:ensure_all_started('bumblebee-lns'),
+            {ok, _} = application:ensure_all_started('bumblebee_lns'),
             ok = test_env:wait_http_ready(),
             lager:set_loglevel(lager_console_backend, debug),
             test_admin:add_area(?AREA),
@@ -49,7 +49,7 @@ loramote_test_() ->
         fun(#state{gateway = Gateway, node1 = Node1}) ->
             test_forwarder:stop(Gateway),
             test_mote:stop(Node1),
-            application:stop('bumblebee-lns'),
+            application:stop('bumblebee_lns'),
             application:stop(mnesia)
         end,
         fun loramote_test/1}.
