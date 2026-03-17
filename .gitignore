@@ -19,6 +19,8 @@ scripts/dpkg-deb/conffiles
 node_modules/
 node_module/
 node_m,odule/
+ui/dist/
+ui/dist-dev/
 priv/admin/jquery.min.js
 priv/admin/angular-simple-logger.min.js
 priv/admin/ng-google-chart.min.js

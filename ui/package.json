@@ -12,7 +12,8 @@
     "preview": "vite preview --host"
   },
   "dependencies": {
-    "vue": "^3.4.26"
+    "vue": "^3.4.26",
+    "vue-router": "^4.5.1"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.2.0",

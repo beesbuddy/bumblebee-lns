@@ -57,6 +57,8 @@ The server:
    * Supports all regions standardized in LoRaWAN 1.0.3 Regional Parameters for
      Europe, US, China, Australia, Asia, South Korea, India and Russia.
  * Provides a network management interface.
+   * New Vue.js management console is available at `/`.
+   * Legacy AngularJS admin remains available at `/admin`.
    * Supports both manual and automatic configuration of data rate (ADR) and other parameters.
    * Monitors the server, gateways and node health status and displays device
      battery and connection quality indicators.

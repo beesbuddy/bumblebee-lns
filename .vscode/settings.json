@@ -10,5 +10,10 @@
   "files.watcherExclude": {
     "**/_build/**": true,
     "**/.rebar3/**": true
-  }
+  },
+  "github.copilot.editor.enableAutoCompletions": false,
+  "editor.inlineSuggest.enabled": true,
+  "github.copilot.inlineSuggest.enable": false,
+  "github.copilot.enable": false,
+  "editor.suggestOnTriggerCharacters": true
 }

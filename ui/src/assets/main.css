@@ -1,21 +1,18 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&display=swap');
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-:root {
-  font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
-}
-
-body {
-  background: radial-gradient(circle at 10% 20%, rgba(129, 230, 217, 0.3), transparent 25%),
-    radial-gradient(circle at 80% 0%, rgba(196, 181, 253, 0.25), transparent 25%),
-    radial-gradient(circle at 20% 90%, rgba(251, 207, 232, 0.35), transparent 30%),
-    theme('colors.base-200');
-}
-
-.glass-panel {
-  backdrop-filter: blur(12px);
-  background: rgba(255, 255, 255, 0.75);
+.angular-google-map-container { height: 400px; }
+p.channel_check { width: 30px; text-align:center; float: left; }
+p.channel_check input[type="checkbox"] { margin: 10px 0px 0px 0px; }
+p.channel_check label { font-weight:normal; display: block; }
+.tab-pane { margin: 20px 0px 12px; }
+.tab-header { margin: 0px 0px 17px; }
+.vis-item { font-size: 85%; }
+.vis-item.error { background-color: orangered; border-color: darkred; }
+.vis-item.warning { background-color: gold; border-color: orange; }
+.vis-item.info { background-color: lightgray; border-color: darkgray; }
+.vis-item.up { }
+.vis-item.re-up { background-color: gold; border-color: orange; }
+.vis-item.down { background-color: paleturquoise; border-color: darkturquoise; }
+.vis-item.bcast { background-color: paleturquoise; border-color: darkturquoise; }
+.btn span.glyphicon + span,
+.btn span.fa + span {
+  margin-left: 4px;
 }
