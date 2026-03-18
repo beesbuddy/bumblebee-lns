@@ -38,7 +38,12 @@
             </div>
             <div class="form-group">
               <div class="col-sm-offset-2 col-sm-10">
-                <button type="button" class="btn btn-primary">SAVE CHANGES</button>
+                <button type="submit" class="btn btn-primary">
+                  <span class="glyphicon glyphicon-ok"></span>
+                  <span class="hidden-xs ng-scope" translate="SUBMIT">
+                    Submit
+                  </span>
+                </button>
               </div>
             </div>
           </form>

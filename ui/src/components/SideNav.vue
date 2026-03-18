@@ -47,7 +47,7 @@
 <script setup>
 import { ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { sideNavMenu } from '../models/sideNavMenu';
+import { sideNavMenu } from '../models/side-nav-menu';
 
 const emit = defineEmits(['navigate']);
 const route = useRoute();
