@@ -64,6 +64,55 @@ The following configuration pages are available:
 The server [Configuration Guidelines](Configuration.md) describe the configuration
 required to operate the server.
 
+## Migrating from Legacy AngularJS Admin to Vue.js Console
+
+The migration from the legacy AngularJS admin (`/admin`) to the Vue.js console (`/`)
+does not require database conversion. Both frontends use the same REST API and the
+same authorization model.
+
+Recommended migration procedure:
+
+1. Upgrade the server and verify both UIs are accessible:
+   * Vue.js console: `http://server:8080/`
+   * Legacy AngularJS admin: `http://server:8080/admin`
+2. Update stored admin links:
+   * In **Server -> Admin URL**, remove the `/admin` suffix.
+   * Update bookmarks, reverse-proxy links, and operator runbooks to use `/`.
+3. Validate core workflows in Vue.js for your deployment:
+   * List records (`/_page`, `/_perPage`), sort (`_sortField`, `_sortDir`)
+   * Create/edit forms for writable entities
+   * Delete actions where permitted by API scopes
+4. Keep `/admin` available during transition for features not yet ported.
+5. After operators complete migration, keep `/admin` only as a fallback path.
+
+### Route Mapping
+
+Common route mapping examples:
+
+| Legacy AngularJS | Vue.js Console |
+| --- | --- |
+| `/admin` | `/` |
+| `/admin/#/users/list` | `/#/users/list` |
+| `/admin/#/users/create` | `/#/users/create` |
+| `/admin/#/users/edit/<id>` | `/#/users/edit/<id>` |
+| `/admin/#/config/edit/main` | `/#/config/edit/main` |
+
+### Vue.js Coverage in This Release
+
+Implemented in Vue.js:
+
+* Generic list/create/edit/delete CRUD pages for major entities backed by `/api/*`.
+* Server-side pagination and sorting.
+* Read-only operational lists for `events` and `rxframes`.
+* Navigation structure aligned with legacy sections (Server, Infrastructure, Devices, Backends, Frames).
+
+Not yet fully ported from legacy AngularJS:
+
+* Specialized visual widgets (timeline, map views, graph panels).
+* Legacy custom actions and advanced per-entity UI logic.
+
+If an operation is unavailable in Vue.js, use `/admin` temporarily for that specific task.
+
 
 ## Health Monitoring
 
