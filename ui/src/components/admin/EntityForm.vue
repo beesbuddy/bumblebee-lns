@@ -1,25 +1,22 @@
 <template>
   <div>
-    <div class="row list-header">
-      <div class="col-lg-12">
-        <div class="page-header">
-          <div class="pull-right">
-            <slot
-              name="header-actions"
-              :entity="props.entity"
-              :definition="mergedDefinition"
-              :list-to="listTo"
-            >
-              <RouterLink class="btn btn-default" :to="listTo">
-                <span class="glyphicon glyphicon-list" aria-hidden="true" />
-                <span class="hidden-xs">{{ t('ui.list', 'List') }}</span>
-              </RouterLink>
-            </slot>
-          </div>
-          <h1>{{ title }}</h1>
-        </div>
-      </div>
-    </div>
+    <AdminPageHeader :title="title">
+      <template #actions>
+        <slot
+          name="header-actions"
+          :entity="props.entity"
+          :definition="mergedDefinition"
+          :list-to="listTo"
+        >
+          <AdminHeaderActionLink
+            :to="listTo"
+            icon-class="glyphicon-list"
+            label-key="ui.list"
+            fallback-label="List"
+          />
+        </slot>
+      </template>
+    </AdminPageHeader>
 
     <div class="tab-pane">
       <div class="row">
@@ -40,71 +37,34 @@
               :set-active-section="activateSection"
             />
 
-            <ul v-if="hasSections" class="nav nav-tabs entity-form-tabs">
-              <li
-                v-for="section in sections"
-                :key="section.id"
-                :class="{ active: section.id === activeSectionId }"
-              >
-                <a href="#" @click.prevent="activateSection(section.id)">
-                  {{ sectionLabel(section) }}
-                </a>
-              </li>
-            </ul>
+            <EntityFormTabs
+              :sections="sections"
+              :active-section-id="activeSectionId"
+              :section-label="sectionLabel"
+              @activate="activateSection"
+            />
 
-            <div
+            <EntityFormFieldRow
               v-for="field in visibleFields"
               :key="field"
-              class="form-group"
+              :field="field"
+              :label="fieldLabel(field)"
+              :kind="fieldKinds[field]"
+              :disabled="isFieldDisabled(field)"
+              :primitive-values="primitiveValues"
+              :json-values="jsonValues"
             >
-              <label class="col-sm-2 control-label">{{ fieldLabel(field) }}</label>
-              <div class="col-sm-10">
+              <template v-if="$slots.field" #field="slotProps">
                 <slot
                   name="field"
-                  :field="field"
-                  :kind="fieldKinds[field]"
-                  :disabled="isFieldDisabled(field)"
-                  :primitive-values="primitiveValues"
-                  :json-values="jsonValues"
-                >
-                  <template v-if="fieldKinds[field] === 'boolean'">
-                    <input
-                      v-model="primitiveValues[field]"
-                      type="checkbox"
-                      :disabled="isFieldDisabled(field)"
-                    />
-                  </template>
-
-                  <template v-else-if="fieldKinds[field] === 'number'">
-                    <input
-                      v-model.number="primitiveValues[field]"
-                      type="number"
-                      class="form-control"
-                      :disabled="isFieldDisabled(field)"
-                    />
-                  </template>
-
-                  <template v-else-if="fieldKinds[field] === 'json'">
-                    <textarea
-                      v-model="jsonValues[field]"
-                      rows="4"
-                      class="form-control"
-                      :disabled="isFieldDisabled(field)"
-                    />
-                    <small class="text-muted">{{ t('ui.json_hint', 'JSON object or array') }}</small>
-                  </template>
-
-                  <template v-else>
-                    <input
-                      v-model="primitiveValues[field]"
-                      type="text"
-                      class="form-control"
-                      :disabled="isFieldDisabled(field)"
-                    />
-                  </template>
-                </slot>
-              </div>
-            </div>
+                  :field="slotProps.field"
+                  :kind="slotProps.kind"
+                  :disabled="slotProps.disabled"
+                  :primitive-values="slotProps.primitiveValues"
+                  :json-values="slotProps.jsonValues"
+                />
+              </template>
+            </EntityFormFieldRow>
 
             <slot
               name="after-fields"
@@ -119,38 +79,27 @@
               :set-active-section="activateSection"
             />
 
-            <div v-if="allowAddField" class="form-group add-field-row">
-              <label class="col-sm-2 control-label">{{ t('ui.add_field', 'Add field') }}</label>
-              <div class="col-sm-4">
-                <input v-model.trim="newFieldName" type="text" class="form-control" placeholder="field_name" />
-              </div>
-              <div class="col-sm-4">
-                <input v-model="newFieldValue" type="text" class="form-control" placeholder="value or JSON" />
-              </div>
-              <div class="col-sm-2">
-                <button type="button" class="btn btn-default" @click="addField">{{ t('ui.add', 'Add') }}</button>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <div class="col-sm-offset-2 col-sm-10">
-                <button
-                  v-if="canSubmit"
-                  type="submit"
-                  class="btn btn-primary"
-                  :disabled="saving"
-                >
-                  <span class="glyphicon glyphicon-ok" />
-                  <span class="hidden-xs">{{ t('ui.submit', 'Submit') }}</span>
-                </button>
+            <EntityFormActions
+              :allow-add-field="allowAddField"
+              :new-field-name="newFieldName"
+              :new-field-value="newFieldValue"
+              :can-submit="canSubmit"
+              :saving="saving"
+              :submit="submit"
+              @update:new-field-name="setNewFieldName"
+              @update:new-field-value="setNewFieldValue"
+              @add-field="addField"
+              @submit="submit"
+            >
+              <template #extra-actions="slotProps">
                 <slot
                   name="extra-actions"
-                  :submit="submit"
-                  :saving="saving"
+                  :submit="slotProps.submit"
+                  :saving="slotProps.saving"
                   :payload-builder="buildPayload"
                 />
-              </div>
-            </div>
+              </template>
+            </EntityFormActions>
           </form>
         </div>
       </div>
@@ -160,7 +109,12 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
-import { RouterLink, useRouter } from 'vue-router';
+import { useRouter } from 'vue-router';
+import AdminHeaderActionLink from './AdminHeaderActionLink.vue';
+import AdminPageHeader from './AdminPageHeader.vue';
+import EntityFormActions from './EntityFormActions.vue';
+import EntityFormFieldRow from './EntityFormFieldRow.vue';
+import EntityFormTabs from './EntityFormTabs.vue';
 import {
   getEntityLabel,
   getEntityLabelKey,
@@ -396,6 +350,14 @@ const addField = () => {
   } catch {
     error.value = 'Invalid JSON in new field value.';
   }
+};
+
+const setNewFieldName = (value) => {
+  newFieldName.value = String(value || '').trim();
+};
+
+const setNewFieldValue = (value) => {
+  newFieldValue.value = String(value || '');
 };
 
 const buildPayload = () => {

@@ -1,6 +1,9 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
 import { RouterLink } from 'vue-router';
+import AdminHeaderActionLink from './AdminHeaderActionLink.vue';
+import AdminPageHeader from './AdminPageHeader.vue';
+import EntityListTable from './EntityListTable.vue';
 import {
   getEntityLabel,
   getEntityLabelKey,
@@ -173,28 +176,26 @@ onMounted(loadList);
 
 <template>
   <div>
-    <div class="row list-header">
-      <div class="col-lg-12">
-        <div class="page-header">
-          <div class="pull-right">
-            <slot
-              name="header-actions"
-              :entity="props.entity"
-              :definition="mergedDefinition"
-              :create-to="createTo"
-              :can-create="canCreate"
-              :refresh="loadList"
-            >
-              <RouterLink v-if="canCreate" class="btn btn-default" :to="createTo">
-                <span class="glyphicon glyphicon-plus" aria-hidden="true" />
-                <span class="hidden-xs">{{ t('ui.create', 'Create') }}</span>
-              </RouterLink>
-            </slot>
-          </div>
-          <h1>{{ title }}</h1>
-        </div>
-      </div>
-    </div>
+    <AdminPageHeader :title="title">
+      <template #actions>
+        <slot
+          name="header-actions"
+          :entity="props.entity"
+          :definition="mergedDefinition"
+          :create-to="createTo"
+          :can-create="canCreate"
+          :refresh="loadList"
+        >
+          <AdminHeaderActionLink
+            v-if="canCreate"
+            :to="createTo"
+            icon-class="glyphicon-plus"
+            label-key="ui.create"
+            fallback-label="Create"
+          />
+        </slot>
+      </template>
+    </AdminPageHeader>
 
     <slot
       name="before-table"
@@ -208,75 +209,70 @@ onMounted(loadList);
       <div class="col-lg-12">
         <div v-if="error" class="alert alert-danger">{{ error }}</div>
 
-        <table class="grid table table-condensed table-hover table-striped">
-          <thead>
-            <tr>
-              <th
-                v-for="column in columns"
-                :key="column"
-                class="sortable-header"
-                @click="changeSort(column)"
+        <EntityListTable
+          :columns="columns"
+          :rows="rows"
+          :loading="loading"
+          :sort-field="sortField"
+          :sort-dir="sortDir"
+          :can-edit="canEdit"
+          :can-delete="canDelete"
+          :id-field="idField"
+          :field-label="fieldLabel"
+          :edit-path-for="editPathFor"
+          :read-nested-value="readNestedValue"
+          :format-value="formatValue"
+          @sort="changeSort"
+          @delete-row="deleteRow"
+        >
+          <template #cell="slotProps">
+            <slot
+              name="cell"
+              :row="slotProps.row"
+              :column="slotProps.column"
+              :value="slotProps.value"
+              :formatted-value="slotProps.formattedValue"
+              :can-edit="slotProps.canEdit"
+              :id-field="slotProps.idField"
+              :edit-to="slotProps.editTo"
+            >
+              <RouterLink
+                v-if="slotProps.canEdit && slotProps.column === slotProps.idField"
+                :to="slotProps.editTo"
               >
-                {{ fieldLabel(column) }}
-                <span v-if="sortField === column">{{ sortDir === 'ASC' ? '▲' : '▼' }}</span>
-              </th>
-              <th v-if="canDelete || canEdit">{{ t('ui.actions', 'Actions') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="loading">
-              <td :colspan="columns.length + 1">{{ t('ui.loading', 'Loading...') }}</td>
-            </tr>
-            <tr v-else-if="rows.length === 0">
-              <td :colspan="columns.length + 1"><strong>{{ t('ui.no_records', 'No record found') }}</strong></td>
-            </tr>
-            <tr v-for="row in rows" :key="row.id ?? row[idField]">
-              <td v-for="column in columns" :key="column">
-                <slot
-                  name="cell"
-                  :row="row"
-                  :column="column"
-                  :value="readNestedValue(row, column)"
-                  :formatted-value="formatValue(readNestedValue(row, column))"
-                  :can-edit="canEdit"
-                  :id-field="idField"
-                  :edit-to="editPathFor(row)"
-                >
-                  <RouterLink v-if="canEdit && column === idField" :to="editPathFor(row)">
-                    {{ formatValue(readNestedValue(row, column)) }}
-                  </RouterLink>
-                  <span v-else>{{ formatValue(readNestedValue(row, column)) }}</span>
-                </slot>
-              </td>
-              <td v-if="canDelete || canEdit" class="row-actions">
-                <slot
-                  name="row-actions"
-                  :row="row"
-                  :can-edit="canEdit"
-                  :can-delete="canDelete"
-                  :edit-to="editPathFor(row)"
-                  :delete-row="() => deleteRow(row)"
-                >
-                  <RouterLink
-                    v-if="canEdit"
-                    class="btn btn-xs btn-default"
-                    :to="editPathFor(row)"
-                  >
-                    {{ t('ui.edit', 'Edit') }}
-                  </RouterLink>
-                  <button
-                    v-if="canDelete"
-                    type="button"
-                    class="btn btn-xs btn-danger"
-                    @click="deleteRow(row)"
-                  >
-                    {{ t('ui.delete', 'Delete') }}
-                  </button>
-                </slot>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                {{ slotProps.formattedValue }}
+              </RouterLink>
+              <span v-else>{{ slotProps.formattedValue }}</span>
+            </slot>
+          </template>
+
+          <template #row-actions="slotProps">
+            <slot
+              name="row-actions"
+              :row="slotProps.row"
+              :can-edit="slotProps.canEdit"
+              :can-delete="slotProps.canDelete"
+              :edit-to="slotProps.editTo"
+              :delete-row="slotProps.deleteRow"
+            >
+              <RouterLink
+                v-if="slotProps.canEdit"
+                class="btn btn-xs btn-default"
+                :to="slotProps.editTo"
+              >
+                {{ t('ui.edit', 'Edit') }}
+              </RouterLink>
+              <button
+                v-if="slotProps.canDelete"
+                type="button"
+                class="btn btn-xs btn-danger"
+                @click="slotProps.deleteRow()"
+              >
+                {{ t('ui.delete', 'Delete') }}
+              </button>
+            </slot>
+          </template>
+        </EntityListTable>
       </div>
     </div>
 

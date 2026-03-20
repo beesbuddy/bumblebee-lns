@@ -1,10 +1,10 @@
-# Reusable Admin Base Components
+# Reusable Admin Components
 
 These components provide reusable CRUD behavior and extension points for custom pages.
 
-## BaseEntityList
+## EntityList
 
-File: `ui/src/components/admin/BaseEntityList.vue`
+File: `ui/src/components/admin/EntityList.vue`
 
 Props:
 - `entity: string` (required)
@@ -28,11 +28,11 @@ Example:
 
 ```vue
 <script setup>
-import BaseEntityList from '@/components/admin/BaseEntityList.vue';
+import EntityList from '@/components/admin/EntityList.vue';
 </script>
 
 <template>
-  <BaseEntityList entity="devices">
+  <EntityList entity="devices">
     <template #header-actions="{ createTo, refresh }">
       <RouterLink class="btn btn-default" :to="createTo">Create</RouterLink>
       <button class="btn btn-default" @click="refresh">Reload</button>
@@ -43,13 +43,13 @@ import BaseEntityList from '@/components/admin/BaseEntityList.vue';
       <button class="btn btn-xs btn-info" @click="$router.push('/devices/diag/' + row.deveui)">Diag</button>
       <button class="btn btn-xs btn-danger" @click="deleteRow">Delete</button>
     </template>
-  </BaseEntityList>
+  </EntityList>
 </template>
 ```
 
-## BaseEntityForm
+## EntityForm
 
-File: `ui/src/components/admin/BaseEntityForm.vue`
+File: `ui/src/components/admin/EntityForm.vue`
 
 Props:
 - `entity: string` (required)
@@ -97,11 +97,11 @@ Example:
 
 ```vue
 <script setup>
-import BaseEntityForm from '@/components/admin/BaseEntityForm.vue';
+import EntityForm from '@/components/admin/EntityForm.vue';
 </script>
 
 <template>
-  <BaseEntityForm entity="devices" mode="edit" :record-id="$route.params.id">
+  <EntityForm entity="devices" mode="edit" :record-id="$route.params.id">
     <template #after-fields>
       <div class="form-group">
         <label class="col-sm-2 control-label">Diagnostics</label>
@@ -114,13 +114,13 @@ import BaseEntityForm from '@/components/admin/BaseEntityForm.vue';
     <template #extra-actions="{ saving }">
       <button type="button" class="btn btn-default" :disabled="saving">Validate</button>
     </template>
-  </BaseEntityForm>
+  </EntityForm>
 </template>
 ```
 
 ## Default Wrappers
 
-- `ui/src/views/EntityListView.vue` is a thin wrapper around `BaseEntityList`.
-- `ui/src/views/EntityFormView.vue` is a thin wrapper around `BaseEntityForm`.
+- `ui/src/views/EntityListView.vue` is a thin wrapper around `EntityList`.
+- `ui/src/views/EntityFormView.vue` is a thin wrapper around `EntityForm`.
 
 You can keep existing generic routes and add custom routes/components for entity-specific behavior.

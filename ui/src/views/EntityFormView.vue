@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
-import BaseEntityForm from '../components/admin/BaseEntityForm.vue';
+import EntityForm from '../components/admin/EntityForm.vue';
 
 const props = defineProps({
   mode: {
@@ -16,5 +16,5 @@ const recordId = computed(() => String(route.params.id || ''));
 </script>
 
 <template>
-  <BaseEntityForm :entity="entity" :mode="mode" :record-id="recordId" />
+  <EntityForm :entity="entity" :mode="mode" :record-id="recordId" />
 </template>

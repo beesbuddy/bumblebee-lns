@@ -44,6 +44,13 @@ p.channel_check label { font-weight:normal; display: block; }
   width: 100%;
 }
 
+@media (max-width: 767px) {
+  .add-field-row .col-sm-4,
+  .add-field-row .col-sm-2 {
+    margin-top: 10px;
+  }
+}
+
 .entity-form-tabs + .form-group {
   margin-top: 30px;
 }
