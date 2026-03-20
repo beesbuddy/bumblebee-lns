@@ -1,7 +1,11 @@
 .angular-google-map-container { height: 400px; }
-p.channel_check { width: 30px; text-align:center; float: left; }
-p.channel_check input[type="checkbox"] { margin: 10px 0px 0px 0px; }
-p.channel_check label { font-weight:normal; display: block; }
+p.channel_check {
+  width: 30px;
+  text-align: center;
+  float: left;
+  input[type="checkbox"] { margin: 10px 0px 0px 0px; }
+  label { font-weight: normal; display: block; }
+}
 .tab-pane { margin: 20px 0px 12px; }
 .tab-header { margin: 0px 0px 17px; }
 .vis-item { font-size: 85%; }
@@ -12,9 +16,11 @@ p.channel_check label { font-weight:normal; display: block; }
 .vis-item.re-up { background-color: gold; border-color: orange; }
 .vis-item.down { background-color: paleturquoise; border-color: darkturquoise; }
 .vis-item.bcast { background-color: paleturquoise; border-color: darkturquoise; }
-.btn span.glyphicon + span,
-.btn span.fa + span {
-  margin-left: 4px;
+.btn {
+  span.glyphicon + span,
+  span.fa + span {
+    margin-left: 4px;
+  }
 }
 
 .sortable-header {
@@ -24,20 +30,20 @@ p.channel_check label { font-weight:normal; display: block; }
 
 .row-actions {
   white-space: nowrap;
-}
 
-.row-actions .btn + .btn {
-  margin-left: 6px;
+  .btn + .btn {
+    margin-left: 6px;
+  }
 }
 
 .pagination-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
 
-.pagination-bar .pagination {
-  margin: 0;
+  .pagination {
+    margin: 0;
+  }
 }
 
 .add-field-row .btn {
@@ -51,8 +57,10 @@ p.channel_check label { font-weight:normal; display: block; }
   }
 }
 
-.entity-form-tabs + .form-group {
-  margin-top: 30px;
+.entity-form-tabs {
+  + .form-group {
+    margin-top: 30px;
+  }
 }
 
 .scope-picker .input-group {
@@ -69,22 +77,22 @@ p.channel_check label { font-weight:normal; display: block; }
 .selected-scope-chip {
   display: inline-flex;
   align-items: center;
-}
 
-.selected-scope-chip .ui-select-match-close {
-  float: none;
-  line-height: 1;
-  margin-right: 4px;
+  .ui-select-match-close {
+    float: none;
+    line-height: 1;
+    margin-right: 4px;
+  }
 }
 
 .boolean-field-control {
   min-height: 34px;
   display: flex;
   align-items: center;
-}
 
-.boolean-field-control input[type="checkbox"] {
-  margin: 0;
+  input[type="checkbox"] {
+    margin: 0;
+  }
 }
 
 .user-scope-tag {
