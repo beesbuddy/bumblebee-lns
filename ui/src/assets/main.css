@@ -54,3 +54,39 @@ p.channel_check label { font-weight:normal; display: block; }
 .entity-form-tabs + .form-group {
   margin-top: 30px;
 }
+
+.scope-picker .input-group {
+  max-width: 480px;
+}
+
+.selected-scope-list {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.selected-scope-chip {
+  display: inline-flex;
+  align-items: center;
+}
+
+.selected-scope-chip .ui-select-match-close {
+  float: none;
+  line-height: 1;
+  margin-right: 4px;
+}
+
+.boolean-field-control {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+}
+
+.boolean-field-control input[type="checkbox"] {
+  margin: 0;
+}
+
+.user-scope-tag {
+  margin-right: 4px;
+}

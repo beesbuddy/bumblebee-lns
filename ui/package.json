@@ -12,6 +12,7 @@
     "preview": "vite preview --host"
   },
   "dependencies": {
+    "pinia": "^3.0.4",
     "vue": "^3.4.26",
     "vue-router": "^4.5.1"
   },

@@ -132,6 +132,13 @@ const definitions = {
     canEdit: true,
     canDelete: true,
     listFields: ['name', 'scopes', 'email', 'send_alerts'],
+    createDefaults: {
+      name: '',
+      password: '',
+      scopes: [],
+      email: '',
+      send_alerts: false
+    },
     perPage: DEFAULT_PER_PAGE
   },
   areas: {

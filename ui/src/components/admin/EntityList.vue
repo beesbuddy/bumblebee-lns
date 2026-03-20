@@ -12,6 +12,7 @@ import {
   resolveFieldLabelKey
 } from '../../models/entity-definitions';
 import { deleteRecord, listRecords } from '../../services/admin-api';
+import { resolveEntityStore } from '../../stores/entity-store-registry';
 import { t } from '../../i18n';
 
 const props = defineProps({
@@ -86,6 +87,19 @@ const formatValue = (value) => {
   return String(value);
 };
 
+const normalizeScopeValues = (value) => {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item || '').trim()).filter(Boolean);
+  }
+  if (typeof value === 'string') {
+    return value
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  return [];
+};
+
 const fieldLabel = (field) => {
   const key = resolveFieldLabelKey(props.entity, field, 'list');
   return key ? t(key, humanizeFieldName(field)) : humanizeFieldName(field);
@@ -100,6 +114,22 @@ const loadList = async () => {
   loading.value = true;
   error.value = '';
   try {
+    const entityStore = resolveEntityStore(props.entity);
+    if (entityStore) {
+      await entityStore.fetchAll();
+      const { rows: pagedRows, totalCount: totalFromStore } = entityStore.listPage({
+        page: currentPage.value,
+        perPage: mergedDefinition.value.perPage,
+        sortField: sortField.value,
+        sortDir: sortDir.value,
+        valueReader: readNestedValue
+      });
+      rows.value = pagedRows;
+      totalCount.value = totalFromStore;
+      emit('loaded', rows.value);
+      return;
+    }
+
     const params = {
       _page: currentPage.value,
       _perPage: mergedDefinition.value.perPage
@@ -155,7 +185,12 @@ const deleteRow = async (row) => {
     return;
   }
   try {
-    await deleteRecord(props.entity, String(id));
+    const entityStore = resolveEntityStore(props.entity);
+    if (entityStore) {
+      await entityStore.deleteOne(String(id));
+    } else {
+      await deleteRecord(props.entity, String(id));
+    }
     emit('deleted', row);
     await loadList();
   } catch (err) {
@@ -236,8 +271,29 @@ onMounted(loadList);
               :id-field="slotProps.idField"
               :edit-to="slotProps.editTo"
             >
+              <template v-if="props.entity === 'users' && slotProps.column === 'scopes'">
+                <span
+                  v-for="scope in normalizeScopeValues(slotProps.value)"
+                  :key="scope"
+                  class="label label-default user-scope-tag"
+                >
+                  {{ scope }}
+                </span>
+                <span v-if="normalizeScopeValues(slotProps.value).length === 0">
+                  {{ slotProps.formattedValue }}
+                </span>
+              </template>
+              <template v-else-if="props.entity === 'users' && slotProps.column === 'send_alerts'">
+                <span
+                  :class="[
+                    'glyphicon',
+                    slotProps.value ? 'glyphicon-ok text-success' : 'glyphicon-remove text-danger'
+                  ]"
+                  aria-hidden="true"
+                />
+              </template>
               <RouterLink
-                v-if="slotProps.canEdit && slotProps.column === slotProps.idField"
+                v-else-if="slotProps.canEdit && slotProps.column === slotProps.idField"
                 :to="slotProps.editTo"
               >
                 {{ slotProps.formattedValue }}

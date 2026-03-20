@@ -48,8 +48,9 @@
               v-for="field in visibleFields"
               :key="field"
               :field="field"
-              :label="fieldLabel(field)"
+              :label="fieldLabelWithRequiredMark(field)"
               :kind="fieldKinds[field]"
+              :options="fieldOptions[field] || []"
               :disabled="isFieldDisabled(field)"
               :primitive-values="primitiveValues"
               :json-values="jsonValues"
@@ -80,7 +81,7 @@
             />
 
             <EntityFormActions
-              :allow-add-field="allowAddField"
+              :allow-add-field="allowAddFieldForEntity"
               :new-field-name="newFieldName"
               :new-field-value="newFieldValue"
               :can-submit="canSubmit"
@@ -124,6 +125,8 @@ import {
   resolveFormSections
 } from '../../models/entity-definitions';
 import { createRecord, readRecord, updateRecord } from '../../services/admin-api';
+import { useScopesStore } from '../../stores/scopes';
+import { resolveEntityStore } from '../../stores/entity-store-registry';
 import { t } from '../../i18n';
 
 const props = defineProps({
@@ -155,6 +158,7 @@ const props = defineProps({
 
 const emit = defineEmits(['loaded', 'load-error', 'submit-success', 'submit-error']);
 const router = useRouter();
+const scopesStore = useScopesStore();
 
 const loading = ref(false);
 const saving = ref(false);
@@ -173,6 +177,15 @@ const mergedDefinition = computed(() => ({
   ...resolveEntityDefinition(props.entity),
   ...(props.definition || {})
 }));
+const usersScopeOptions = computed(() => (props.entity === 'users' ? scopesStore.scopes : []));
+const fieldOptions = computed(() => {
+  if (props.entity !== 'users') {
+    return {};
+  }
+  return {
+    scopes: usersScopeOptions.value
+  };
+});
 
 const canSubmit = computed(() => {
   if (props.mode === 'create') {
@@ -180,6 +193,7 @@ const canSubmit = computed(() => {
   }
   return mergedDefinition.value.canEdit;
 });
+const allowAddFieldForEntity = computed(() => props.allowAddField && props.entity !== 'users');
 
 const entityLabel = computed(() =>
   t(getEntityLabelKey(props.entity), getEntityLabel(props.entity))
@@ -229,12 +243,13 @@ const hasSections = computed(() => sections.value.length > 0);
 const activeSection = computed(
   () => sections.value.find((section) => section.id === activeSectionId.value) || sections.value[0] || null
 );
+const hiddenFields = computed(() => new Set(['id']));
 const visibleFields = computed(() => {
   if (!hasSections.value || !activeSection.value) {
-    return orderedFields.value;
+    return orderedFields.value.filter((field) => !hiddenFields.value.has(field));
   }
   const allowed = new Set(activeSection.value.fields || []);
-  return orderedFields.value.filter((field) => allowed.has(field));
+  return orderedFields.value.filter((field) => allowed.has(field) && !hiddenFields.value.has(field));
 });
 
 const resetFormState = () => {
@@ -244,6 +259,13 @@ const resetFormState = () => {
 };
 
 const classifyField = (field, value) => {
+  if (props.entity === 'users' && field === 'scopes') {
+    fieldKinds.value[field] = 'string-array';
+    primitiveValues.value[field] = Array.isArray(value)
+      ? value.map((item) => String(item)).filter(Boolean)
+      : [];
+    return;
+  }
   if (Array.isArray(value) || (value && typeof value === 'object')) {
     fieldKinds.value[field] = 'json';
     jsonValues.value[field] = JSON.stringify(value, null, 2);
@@ -268,6 +290,29 @@ const fieldLabel = (field) => {
   return key ? t(key, humanizeFieldName(field)) : humanizeFieldName(field);
 };
 
+const sendAlertsEnabled = computed(() => primitiveValues.value.send_alerts === true);
+
+const isUsersRequiredField = (field) => {
+  if (props.entity !== 'users') {
+    return false;
+  }
+  if (field === 'name' || field === 'scopes') {
+    return true;
+  }
+  if (field === 'password' && props.mode === 'create') {
+    return true;
+  }
+  if (field === 'email' && sendAlertsEnabled.value) {
+    return true;
+  }
+  return false;
+};
+
+const fieldLabelWithRequiredMark = (field) => {
+  const base = fieldLabel(field);
+  return isUsersRequiredField(field) ? `${base} *` : base;
+};
+
 const sectionLabel = (section) => {
   const fallback =
     section.label ||
@@ -285,7 +330,25 @@ const activateSection = (sectionId) => {
 
 const hydrateFromObject = (payload) => {
   resetFormState();
-  Object.entries(payload || {}).forEach(([field, value]) => classifyField(field, value));
+  const source =
+    props.entity === 'users'
+      ? { ...createDefaultsPayload(), ...(payload || {}) }
+      : payload || {};
+  Object.entries(source).forEach(([field, value]) => classifyField(field, value));
+};
+
+const createDefaultsPayload = () => {
+  const defaults = mergedDefinition.value.createDefaults;
+  if (defaults && typeof defaults === 'object') {
+    return defaults;
+  }
+  return { [mergedDefinition.value.idField]: '' };
+};
+
+const ensureEntitySupportData = async () => {
+  if (props.entity === 'users') {
+    await scopesStore.fetchScopes();
+  }
 };
 
 const loadRecord = async () => {
@@ -294,11 +357,20 @@ const loadRecord = async () => {
   success.value = '';
 
   try {
+    await ensureEntitySupportData();
     if (props.mode === 'create') {
-      hydrateFromObject({ [mergedDefinition.value.idField]: '' });
+      hydrateFromObject(createDefaultsPayload());
       emit('loaded', null);
       return;
     }
+    const entityStore = resolveEntityStore(props.entity);
+    if (entityStore) {
+      const data = await entityStore.fetchById(props.recordId);
+      hydrateFromObject(data || {});
+      emit('loaded', data);
+      return;
+    }
+
     const { data } = await readRecord(props.entity, props.recordId);
     hydrateFromObject(data || {});
     emit('loaded', data);
@@ -360,10 +432,54 @@ const setNewFieldValue = (value) => {
   newFieldValue.value = String(value || '');
 };
 
+const validateUsersRequiredFields = (payload) => {
+  if (props.entity !== 'users') {
+    return '';
+  }
+
+  const name = String(payload.name || '').trim();
+  if (!name) {
+    return 'Name is required.';
+  }
+
+  if (props.mode === 'create') {
+    const password = String(payload.password || '').trim();
+    if (!password) {
+      return 'Password is required.';
+    }
+  }
+
+  if (!Array.isArray(payload.scopes) || payload.scopes.length === 0) {
+    return 'At least one scope is required.';
+  }
+
+  if (typeof payload.send_alerts !== 'boolean') {
+    return 'Send alerts is required.';
+  }
+
+  if (payload.send_alerts === true) {
+    const email = String(payload.email || '').trim();
+    if (!email) {
+      return 'Email is required when send alerts is enabled.';
+    }
+  }
+
+  return '';
+};
+
 const buildPayload = () => {
   const payload = {};
   for (const field of Object.keys(fieldKinds.value)) {
+    if (hiddenFields.value.has(field)) {
+      continue;
+    }
     const kind = fieldKinds.value[field];
+    if (kind === 'string-array') {
+      payload[field] = Array.isArray(primitiveValues.value[field])
+        ? primitiveValues.value[field].map((item) => String(item)).filter(Boolean)
+        : [];
+      continue;
+    }
     if (kind === 'json') {
       const raw = String(jsonValues.value[field] || '').trim();
       if (raw === '') {
@@ -385,8 +501,16 @@ const submit = async () => {
 
   try {
     const payload = buildPayload();
+    const validationError = validateUsersRequiredFields(payload);
+    if (validationError) {
+      throw new Error(validationError);
+    }
+    const entityStore = resolveEntityStore(props.entity);
     if (props.mode === 'create') {
-      const result = await createRecord(props.entity, payload);
+      const result =
+        entityStore
+          ? await entityStore.createOne(payload)
+          : await createRecord(props.entity, payload);
       success.value = 'Record created.';
       emit('submit-success', { mode: props.mode, payload, result });
       const id = payload[mergedDefinition.value.idField];
@@ -394,7 +518,10 @@ const submit = async () => {
         await router.push(`/${props.entity}/edit/${encodeURIComponent(String(id))}`);
       }
     } else {
-      const result = await updateRecord(props.entity, props.recordId, payload);
+      const result =
+        entityStore
+          ? await entityStore.updateOne(props.recordId, payload)
+          : await updateRecord(props.entity, props.recordId, payload);
       success.value = 'Record updated.';
       emit('submit-success', { mode: props.mode, payload, result });
     }
