@@ -10,10 +10,10 @@
 
     <div class="row lit-view">
       <div class="col-lg-12">
+        <div v-if="timelineError" class="alert alert-danger">
+          {{ timelineError }}
+        </div>
         <div class="panel panel-default">
-          <div v-if="timelineError" class="alert alert-danger timeline-error">
-            {{ timelineError }}
-          </div>
           <div ref="timelineContainer" class="dashboard-timeline" />
         </div>
       </div>
