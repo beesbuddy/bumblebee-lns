@@ -60,21 +60,50 @@
         </div>
       </div>
       <div class="col-lg-6">
-        <div class="panel panel-default">
-          <div class="panel-heading">Recent Events</div>
-          <div class="panel-body">
-            <div class="placeholder-box">Events list placeholder</div>
-          </div>
-        </div>
+        
       </div>
     </div>
 
     <div class="row list-view">
       <div class="col-lg-6">
         <div class="panel panel-default">
-          <div class="panel-heading">Recent Events</div>
+          <div class="panel-heading">Events</div>
           <div class="panel-body">
-            <div class="placeholder-box">Events list placeholder</div>
+            <div v-if="eventsStore.error" class="alert alert-danger">
+              {{ eventsStore.error }}
+            </div>
+            <div v-else-if="eventsStore.loading" class="text-muted">Loading events...</div>
+            <div v-else-if="events.length === 0" class="text-muted">No events available.</div>
+            <div v-else class="table-responsive">
+              <table class="table table-striped table-hover">
+                <thead>
+                  <tr>
+                    <th>Last Occurred</th>
+                    <th>Entity</th>
+                    <th>Eid</th>
+                    <th>Text</th>
+                    <th>Args</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(eventRow, index) in events" :key="eventRow.evid || `event-${index}`">
+                    <td>{{ formatDateTime(eventRow.last_rx) }}</td>
+                    <td>{{ eventRow.entity || '-' }}</td>
+                    <td>
+                      <RouterLink
+                        v-if="eventRow.eid"
+                        :to="`/servers/edit/${encodeURIComponent(serverEditId(eventRow))}`"
+                      >
+                        {{ eventRow.eid }}
+                      </RouterLink>
+                      <span v-else>-</span>
+                    </td>
+                    <td>{{ eventRow.text || '-' }}</td>
+                    <td>{{ formatEventArgs(eventRow.args) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -92,12 +121,15 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { RouterLink } from 'vue-router';
 import { ensureVisScript } from '../services/vis-loader';
+import { useEventsStore } from '../stores/events';
 import { useServersStore } from '../stores/servers';
 
 const timelineContainer = ref(null);
 const timelineError = ref('');
 const serversStore = useServersStore();
+const eventsStore = useEventsStore();
 
 const toFiniteNumber = (value) => {
   const number = Number(value);
@@ -226,6 +258,56 @@ const servers = computed(() =>
     })
   )
 );
+const events = computed(() => eventsStore.events);
+
+const formatDateTime = (value) => {
+  const text = String(value || '').trim();
+  if (!text) {
+    return '-';
+  }
+
+  const parsed = new Date(text);
+  if (Number.isNaN(parsed.getTime())) {
+    return text;
+  }
+
+  return parsed.toLocaleString();
+};
+
+const formatEventArgs = (value) => {
+  if (value === null || value === undefined || value === '') {
+    return '-';
+  }
+  if (typeof value === 'object') {
+    return JSON.stringify(value);
+  }
+  return String(value);
+};
+
+const decodeHex = (value) => {
+  const text = String(value || '').trim();
+  if (!text || text.length % 2 !== 0 || !/^[0-9a-fA-F]+$/.test(text)) {
+    return '';
+  }
+
+  const bytes = new Uint8Array(text.length / 2);
+  for (let index = 0; index < text.length; index += 2) {
+    bytes[index / 2] = Number.parseInt(text.slice(index, index + 2), 16);
+  }
+
+  const decoded = new TextDecoder().decode(bytes).replace(/\0+$/g, '');
+  return /^[\x20-\x7E]+$/.test(decoded) ? decoded : '';
+};
+
+const serverEditId = (eventRow) => {
+  const rawEid = String(eventRow?.eid || '').trim();
+  if (!rawEid) {
+    return '';
+  }
+
+  const decoded = decodeHex(rawEid);
+  return decoded || rawEid;
+};
 
 let timeline = null;
 let items = null;
@@ -328,6 +410,12 @@ onMounted(async () => {
     await serversStore.fetchServers();
   } catch (_error) {
     // Error is reflected via serversStore.error.
+  }
+
+  try {
+    await eventsStore.fetchEvents();
+  } catch (_error) {
+    // Error is reflected via eventsStore.error.
   }
 });
 
