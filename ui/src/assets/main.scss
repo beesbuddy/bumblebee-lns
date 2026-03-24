@@ -26,6 +26,7 @@ p.channel_check {
 .sortable-header {
   cursor: pointer;
   user-select: none;
+  color: #337ab7;
 }
 
 .row-actions {
@@ -101,4 +102,12 @@ p.channel_check {
 
 .dashboard-timeline {
   min-height: 300px;
+}
+
+.panel-default > .panel-heading {
+  color: #337ab7;
+
+  a {
+    color: #337ab7;
+  }
 }

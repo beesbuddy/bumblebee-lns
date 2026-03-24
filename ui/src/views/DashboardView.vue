@@ -22,8 +22,10 @@
     <div class="row list-view">
       <div class="col-lg-6">
         <div class="panel panel-default">
-          <div class="panel-heading">Servers</div>
-          <div class="panel-body">
+          <div class="panel-heading">
+            <RouterLink to="/servers/list">Servers</RouterLink>
+          </div>
+          <div class="panel-body panel-body-table">
             <div v-if="serversStore.error" class="alert alert-danger">
               {{ serversStore.error }}
             </div>
@@ -33,11 +35,68 @@
               <table class="table table-striped table-hover">
                 <thead>
                   <tr>
-                    <th>Server Name</th>
-                    <th>Version</th>
-                    <th>Memory</th>
-                    <th>Disk</th>
-                    <th>Status</th>
+                    <th>
+                      <button type="button" class="sortable-column" @click="changeServersSort('sname')">
+                        <span class="sortable-label sortable-label-min">Server Name</span>
+                        <span class="glyphicon" :class="serversSortIcon('sname')" aria-hidden="true" />
+                      </button>
+                    </th>
+                    <th>
+                      <button
+                        type="button"
+                        class="sortable-column"
+                        @click="changeServersSort('modules')"
+                      >
+                        <span class="sortable-label sortable-label-medium">Version</span>
+                        <span
+                          class="glyphicon"
+                          :class="serversSortIcon('modules')"
+                          aria-hidden="true"
+                        />
+                      </button>
+                    </th>
+                    <th>
+                      <button
+                        type="button"
+                        class="sortable-column"
+                        @click="changeServersSort('memory')"
+                      >
+                        <span class="sortable-label sortable-label-medium">Memory</span>
+                        <span
+                          class="glyphicon"
+                          :class="serversSortIcon('memory')"
+                          aria-hidden="true"
+                        />
+                      </button>
+                    </th>
+                    <th>
+                      <button
+                        type="button"
+                        class="sortable-column"
+                        @click="changeServersSort('disk')"
+                      >
+                        <span class="sortable-label sortable-label-min">Disk</span>
+                        <span
+                          class="glyphicon"
+                          :class="serversSortIcon('disk')"
+                          aria-hidden="true"
+                        />
+                      </button>
+                    </th>
+                    <th>
+                      <button
+                        type="button"
+                        class="sortable-column"
+                        @click="changeServersSort('health_decay')"
+                      >
+                        <span class="sortable-label sortable-label-medium">Status</span>
+                        <span
+                          class="glyphicon"
+                          :class="serversSortIcon('health_decay')"
+                          aria-hidden="true"
+                        />
+                      </button>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -67,26 +126,61 @@
     <div class="row list-view">
       <div class="col-lg-6">
         <div class="panel panel-default">
-          <div class="panel-heading">Events</div>
-          <div class="panel-body">
+          <div class="panel-heading">
+            <RouterLink to="/events/list">Events</RouterLink>
+          </div>
+          <div class="panel-body panel-body-table">
             <div v-if="eventsStore.error" class="alert alert-danger">
               {{ eventsStore.error }}
             </div>
             <div v-else-if="eventsStore.loading" class="text-muted">Loading events...</div>
-            <div v-else-if="events.length === 0" class="text-muted">No events available.</div>
+            <div v-else-if="recentEvents.length === 0" class="text-muted">No events available.</div>
             <div v-else class="table-responsive">
               <table class="table table-striped table-hover">
                 <thead>
                   <tr>
-                    <th>Last Occurred</th>
-                    <th>Entity</th>
-                    <th>Eid</th>
-                    <th>Text</th>
-                    <th>Args</th>
+                    <th>
+                      <button
+                        type="button"
+                        class="sortable-column"
+                        @click="changeEventsSort('last_rx')"
+                      >
+                        <span class="sortable-label sortable-label-min">Last Occurred</span>
+                        <span class="glyphicon" :class="sortIcon('last_rx')" aria-hidden="true" />
+                      </button>
+                    </th>
+                    <th>
+                      <button
+                        type="button"
+                        class="sortable-column"
+                        @click="changeEventsSort('entity')"
+                      >
+                        <span class="sortable-label sortable-label-medium">Entity</span>
+                        <span class="glyphicon" :class="sortIcon('entity')" aria-hidden="true" />
+                      </button>
+                    </th>
+                    <th>
+                      <button type="button" class="sortable-column" @click="changeEventsSort('eid')">
+                        <span class="sortable-label sortable-label-medium">Eid</span>
+                        <span class="glyphicon" :class="sortIcon('eid')" aria-hidden="true" />
+                      </button>
+                    </th>
+                    <th>
+                      <button type="button" class="sortable-column" @click="changeEventsSort('text')">
+                        <span class="sortable-label sortable-label-medium">Text</span>
+                        <span class="glyphicon" :class="sortIcon('text')" aria-hidden="true" />
+                      </button>
+                    </th>
+                    <th>
+                      <button type="button" class="sortable-column" @click="changeEventsSort('args')">
+                        <span class="sortable-label sortable-label-medium">Args</span>
+                        <span class="glyphicon" :class="sortIcon('args')" aria-hidden="true" />
+                      </button>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="(eventRow, index) in events" :key="eventRow.evid || `event-${index}`">
+                  <tr v-for="(eventRow, index) in recentEvents" :key="eventRow.evid || `event-${index}`">
                     <td>{{ formatDateTime(eventRow.last_rx) }}</td>
                     <td>{{ eventRow.entity || '-' }}</td>
                     <td>
@@ -130,6 +224,11 @@ const timelineContainer = ref(null);
 const timelineError = ref('');
 const serversStore = useServersStore();
 const eventsStore = useEventsStore();
+const MAX_DASHBOARD_EVENTS = 7;
+const serversSortField = ref('sname');
+const serversSortDir = ref('ASC');
+const eventsSortField = ref('last_rx');
+const eventsSortDir = ref('DESC');
 
 const toFiniteNumber = (value) => {
   const number = Number(value);
@@ -251,14 +350,66 @@ const serverStatusClass = (server) => {
   return 'text-muted';
 };
 
-const servers = computed(() =>
-  [...serversStore.servers].sort((left, right) =>
-    String(left?.sname || '').localeCompare(String(right?.sname || ''), undefined, {
-      sensitivity: 'base'
-    })
-  )
-);
-const events = computed(() => eventsStore.events);
+const servers = computed(() => serversStore.servers);
+const recentEvents = computed(() => eventsStore.events.slice(0, MAX_DASHBOARD_EVENTS));
+
+const loadServers = async () =>
+  serversStore.fetchServers({
+    sortField: serversSortField.value,
+    sortDir: serversSortDir.value
+  });
+
+const loadEvents = async () =>
+  eventsStore.fetchEvents({
+    page: 1,
+    perPage: MAX_DASHBOARD_EVENTS,
+    sortField: eventsSortField.value,
+    sortDir: eventsSortDir.value
+  });
+
+const changeServersSort = async (column) => {
+  if (serversSortField.value === column) {
+    serversSortDir.value = serversSortDir.value === 'ASC' ? 'DESC' : 'ASC';
+  } else {
+    serversSortField.value = column;
+    serversSortDir.value = 'ASC';
+  }
+
+  try {
+    await loadServers();
+  } catch (_error) {
+    // Error is reflected via serversStore.error.
+  }
+};
+
+const changeEventsSort = async (column) => {
+  if (eventsSortField.value === column) {
+    eventsSortDir.value = eventsSortDir.value === 'ASC' ? 'DESC' : 'ASC';
+  } else {
+    eventsSortField.value = column;
+    eventsSortDir.value = 'ASC';
+  }
+
+  try {
+    await loadEvents();
+  } catch (_error) {
+    // Error is reflected via eventsStore.error.
+  }
+};
+
+const sortIcon = (column) => {
+  if (eventsSortField.value !== column) {
+    return 'glyphicon-sort';
+  }
+  return eventsSortDir.value === 'ASC' ? 'glyphicon-sort-by-attributes' : 'glyphicon-sort-by-attributes-alt';
+};
+
+const serversSortIcon = (column) => {
+  if (serversSortField.value !== column) {
+    return 'glyphicon-sort';
+  }
+  return serversSortDir.value === 'ASC' ? 'glyphicon-sort-by-attributes' : 'glyphicon-sort-by-attributes-alt';
+};
 
 const formatDateTime = (value) => {
   const text = String(value || '').trim();
@@ -407,13 +558,13 @@ onMounted(async () => {
   }
 
   try {
-    await serversStore.fetchServers();
+    await loadServers();
   } catch (_error) {
     // Error is reflected via serversStore.error.
   }
 
   try {
-    await eventsStore.fetchEvents();
+    await loadEvents();
   } catch (_error) {
     // Error is reflected via eventsStore.error.
   }
@@ -434,5 +585,73 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+.panel-body-table {
+  padding: 0;
+}
+
+.panel-body-table .table {
+  margin-bottom: 0;
+}
+
+.sortable-column {
+  color: #337ab7;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font-weight: inherit;
+  text-align: left;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sortable-column:hover,
+.sortable-column:focus {
+  color: #337ab7;
+  text-decoration: underline;
+  outline: none;
+}
+
+.sortable-label {
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  .sortable-column {
+    gap: 4px;
+  }
+
+  .sortable-label-min,
+  .sortable-label-medium {
+    display: inline-block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+  }
+
+  .sortable-label-min {
+    max-width: 58px;
+  }
+
+  .sortable-label-medium {
+    max-width: 32px;
+  }
+
+  .sortable-label-min {
+    display: none;
+  }
+}
+
+.panel-heading :deep(a) {
+  color: inherit;
+  text-decoration: none;
+}
+
+.panel-heading :deep(a:hover),
+.panel-heading :deep(a:focus) {
+  text-decoration: underline;
 }
 </style>

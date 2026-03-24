@@ -11,20 +11,28 @@ export const useServersStore = defineStore('servers', {
     error: ''
   }),
   actions: {
-    async fetchServers() {
+    async fetchServers(options = {}) {
       this.loading = true;
       this.error = '';
 
       try {
+        const sortField = String(options.sortField || '');
+        const sortDir = String(options.sortDir || 'ASC').toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
         let page = 1;
         let total = Number.POSITIVE_INFINITY;
         const collected = [];
 
         while (collected.length < total) {
-          const { data, headers } = await listRecords(SERVERS_ENTITY, {
+          const params = {
             _page: page,
             _perPage: FETCH_PAGE_SIZE
-          });
+          };
+          if (sortField) {
+            params._sortField = sortField;
+            params._sortDir = sortDir;
+          }
+
+          const { data, headers } = await listRecords(SERVERS_ENTITY, params);
 
           const chunk = Array.isArray(data) ? data : [];
           collected.push(...chunk);
