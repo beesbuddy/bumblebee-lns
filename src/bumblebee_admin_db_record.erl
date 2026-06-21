@@ -134,10 +134,7 @@ get_fields([], Value) ->
 read_records(Req, #state{table = Table, fields = Fields, module = Module} = State) ->
     Filter = apply(Module, parse, [get_filters(Req)]),
     Match = list_to_tuple([Table | [maps:get(X, Filter, '_') || X <- Fields]]),
-    lists:map(
-        fun(Rec) -> build_record(Rec, State) end,
-        mnesia:dirty_select(Table, [{Match, [], ['$_']}])
-    ).
+    [build_record(Rec, State) || Rec <:- mnesia:dirty_select(Table, [{Match, [], ['$_']}])].
 
 get_filters(Req) ->
     case cowboy_req:match_qs([{'_filters', [], <<"{}">>}], Req) of

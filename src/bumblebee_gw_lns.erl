@@ -21,8 +21,8 @@ init(Req, []) ->
     case authorize(Req) of
         {ok, User, AuthScopes} ->
             case
-                lists:member(<<"gateway:link">>, AuthScopes) orelse
-                    lists:member(<<"unlimited">>, AuthScopes)
+                lists:member(~"gateway:link", AuthScopes) orelse
+                    lists:member(~"unlimited", AuthScopes)
             of
                 true ->
                     init_main(Req, MAC, #state{peer = cowboy_req:peer(Req), user = User});

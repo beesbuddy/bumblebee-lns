@@ -12,7 +12,9 @@ ifeq ($(REBAR3),)
 REBAR3 = $(CURDIR)/rebar3
 endif
 
-.PHONY: build upgrade clean distclean test release dist dpkg fmt fmt-check
+COOKIE ?= COOKIE
+NODE ?= dapnode@localhost
+.PHONY: build upgrade clean distclean test release dist dpkg fmt fmt-check debug
 
 build: $(REBAR3)
 	@$(REBAR3) compile
@@ -51,5 +53,8 @@ install:
 
 dpkg:
 	./scripts/dpkg-deb/build-deb
+
+debug:
+	ERL_FLAGS="+D" rebar3 as test shell --name dapnode@localhost --setcookie COOKIE
 
 # end of file

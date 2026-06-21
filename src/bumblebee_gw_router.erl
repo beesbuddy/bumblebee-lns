@@ -88,7 +88,7 @@ handle_cast({uplinks, PkList}, State) ->
     % wait for packet receptions from other gateways
     State2 =
         lists:foldl(
-            fun(Frame, St) -> handle_uplink(Frame, St) end,
+            fun handle_uplink/2,
             State,
             Unique
         ),

@@ -48,6 +48,17 @@ uri_encode(Value) when is_binary(Value) ->
 uri_encode(Value) when is_list(Value) ->
     uri_string:quote(Value).
 
+-spec to_string(unicode:chardata()) -> string().
+to_string(Value) ->
+    case unicode:characters_to_list(Value, utf8) of
+        S when is_list(S) ->
+            S;
+        {error, S, _Rest} ->
+            S;
+        {incomplete, S, _Rest} ->
+            S
+    end.
+
 parse_uri(Uri) ->
     parse_uri(Uri, []).
 
@@ -59,7 +70,7 @@ parse_uri(Uri, SchemeDefaults) ->
         end,
     case uri_string:parse(UriList) of
         Parsed when is_map(Parsed) ->
-            Scheme = list_to_atom(maps:get(scheme, Parsed)),
+            Scheme = list_to_existing_atom(to_string(maps:get(schema, Parsed))),
             Host = maps:get(host, Parsed),
             Port = maps:get(port, Parsed, proplists:get_value(Scheme, SchemeDefaults)),
             Path = maps:get(path, Parsed, "/"),

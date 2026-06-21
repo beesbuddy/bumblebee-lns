@@ -2,27 +2,14 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "run main",
-      "type": "erlang",
-      "request": "launch",
-      "runinterminal": [
-        "BUMBLEBEE_DEV_RELOAD=1",
-        "BUMBLEBEE_FRONTEND_ENV=dev",
-        "BUMBLEBEE_FRONTEND_HOT=1",
-        "BUMBLEBEE_FRONTEND_DEV_PORT=5173",
-        "rebar3",
-        "shell",
-        "--name",
-        "dapnode@localhost",
-        "--setcookie",
-        "COOKIE",
-        "--eval",
-        "application:ensure_all_started(bumblebee_lns)."
-      ],
-      "projectnode": "dapnode@localhost",
-      "cookie": "COOKIE",
-      "timeout": 300,
-      "cwd": "${workspaceFolder}"
+      "name": "Attach to node devel@localhost",
+      "type": "erlang-edb",
+      "request": "attach",
+      "config": {
+        "node": "dapnode@localhost",
+        "cookie": "COOKIE",
+        "cwd": "${workspaceFolder}"
+      }
     }
   ]
 }

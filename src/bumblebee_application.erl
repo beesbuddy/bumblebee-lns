@@ -77,7 +77,7 @@ store_frame(DevAddr, TxData) ->
     }).
 
 get_stored_frames(DevAddr) ->
-    mnesia:dirty_select(queued, [{#queued{devaddr = DevAddr, _ = '_'}, [], ['$_']}]).
+    mnesia:dirty_select(queued, [{#queued{devaddr = DevAddr, _ = calendar:datetime()}, [], ['$_']}]).
 
 take_previous_frames(DevAddr, Port) ->
     lists:foldl(

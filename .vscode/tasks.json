@@ -2,17 +2,25 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "rebar3 compile",
+      "label": "Erlang Debug",
       "type": "shell",
-      "command": "rebar3 compile",
-      "group": "build",
-      "problemMatcher": []
-    },
-    {
-      "label": "rebar3 escriptize",
-      "type": "shell",
-      "command": "rebar3 escriptize",
-      "group": "build",
+      "command": "rebar3",
+      "args": [
+        "as",
+        "test",
+        "shell",
+        "--name",
+        "dapnode@localhost",
+        "--setcookie",
+        "COOKIE",
+        "--",
+        "-emu_args",
+        "+D"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
       "problemMatcher": []
     }
   ]
