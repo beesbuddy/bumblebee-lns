@@ -102,6 +102,27 @@ The main components of the bumblebee are shown in the following figure:
 
 ### Usage
 
+#### Phoenix and LiveView development server
+
+The HTTP interface is now hosted by Phoenix LiveView. Starting Phoenix also
+initializes Mnesia and supervises the existing Erlang LNS runtime, including the
+Semtech UDP packet-forwarder listener and Basic Station WebSocket handling. In
+development, changes to files under `src/` are compiled and loaded automatically:
+
+```bash
+mix deps.get
+mix phx.server
+```
+
+The defaults are:
+
+* Phoenix and Basic Station HTTP/WebSocket: `http://localhost:8080`
+* Basic Station router endpoint: `/router-info/:mac`
+* Semtech packet-forwarder UDP: port `1680`
+
+Set `PHX_PORT` to change the HTTP port. No Ecto repository or external SQL
+database is configured; the existing Mnesia data layer is used directly.
+
 The server behaviour is described in the [Introduction](doc/Introduction.md).
 
 The [Installation Instructions](doc/Installation.md) describe how to build,

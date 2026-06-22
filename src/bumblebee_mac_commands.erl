@@ -509,7 +509,7 @@ send_adr(
     #node{adr_flag = 1, adr_set = {TxPower, DataRate, Chans}, adr_failed = Failed} = Node,
     FOptsOut
 ) when
-    (is_integer(TxPower) or is_integer(DataRate) or is_list(Chans)),
+    (is_integer(TxPower) orelse is_integer(DataRate) orelse is_list(Chans)),
     (Failed == undefined orelse Failed == [])
 ->
     Set = merge_adr(Node#node.adr_set, Node#node.adr_use),

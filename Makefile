@@ -14,7 +14,13 @@ endif
 
 COOKIE ?= COOKIE
 NODE ?= dapnode@localhost
-.PHONY: build upgrade clean distclean test release dist dpkg fmt fmt-check debug
+.PHONY: build upgrade clean distclean test release dist dpkg fmt fmt-check debug phx-server mix-setup
+
+mix-setup:
+	mix deps.get
+
+phx-server:
+	mix phx.server
 
 build: $(REBAR3)
 	@$(REBAR3) compile
@@ -55,6 +61,6 @@ dpkg:
 	./scripts/dpkg-deb/build-deb
 
 debug:
-	ERL_FLAGS="+D" rebar3 as test shell --name dapnode@localhost --setcookie COOKIE
+	BUMBLEBEE_DEV_RELOAD=1 ERL_FLAGS="+D" rebar3 as test shell --name dapnode@localhost --setcookie COOKIE
 
 # end of file

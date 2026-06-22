@@ -112,7 +112,7 @@ create_counters() ->
 event0(warning, Source, Text, Num) ->
     warning(Source, Text, Num);
 event0(error, Source, Text, Num) ->
-    error(Source, Text, Num);
+    erlang:error(Source, Text, Num);
 event0(_Severity, _Source, _Text, _Num) ->
     ok.
 

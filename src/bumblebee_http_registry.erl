@@ -115,6 +115,7 @@ get_static(scopes) ->
 %% https://ninenines.eu/docs/en/cowboy/2.2/guide/routing/
 get_static(routes) ->
     [
+        {"/info", bumblebee_info, []},
         {"/router-info/[:mac]", bumblebee_gw_lns, []},
         {"/api/scopes/[:name]", bumblebee_admin_scopes, [{<<"server:read">>, '*'}]},
         {"/api/config/[:name]", bumblebee_admin_db_record,

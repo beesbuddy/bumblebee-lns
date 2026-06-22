@@ -69,7 +69,10 @@ index_files(Dir) ->
         true,
         fun(File, Acc) ->
             Signature = file_signature(File),
-            maps:put(File, Signature, Acc)
+            case Acc of
+                Map when is_map(Map) -> maps:put(File, Signature, Map);
+                _ -> erlang:error({invalid_reloader_index, Acc})
+            end
         end,
         #{}
     ).
@@ -93,9 +96,9 @@ detect_changes(Dir, Prev) ->
 
 compile_and_load(File) ->
     EbinDir =
-        case code:lib_dir(runlet, ebin) of
-            {error, bad_name} -> filename:dirname(code:which(?MODULE));
-            Path -> Path
+        case code:lib_dir(bumblebee_lns) of
+            {error, bad_name} -> module_ebin_dir();
+            Path -> filename:join(Path, "ebin")
         end,
     code:add_patha(EbinDir),
     WasInterpreted = is_interpreted(File),
@@ -109,6 +112,12 @@ compile_and_load(File) ->
         Error ->
             io:format("Reload failed for ~s: ~p~n", [File, Error]),
             Error
+    end.
+
+module_ebin_dir() ->
+    case code:which(?MODULE) of
+        Path when is_list(Path) -> filename:dirname(Path);
+        _ -> filename:absname("ebin")
     end.
 
 handle_compiled(Module, File, WasInterpreted) ->
@@ -126,10 +135,17 @@ handle_compiled(Module, File, WasInterpreted) ->
 %% Returns true if the module owning File is currently interpreted by the debugger.
 is_interpreted(File) ->
     try
-        Module = list_to_atom(filename:basename(File, ".erl")),
-        int:is_interpreted(Module)
+        Module = module_from_file(File),
+        lists:member(Module, int:interpreted())
     catch
         _:_ -> false
+    end.
+
+module_from_file(File) ->
+    Name = filename:rootname(filename:basename(File)),
+    case Name of
+        String when is_list(String) -> list_to_existing_atom(String);
+        Binary when is_binary(Binary) -> binary_to_existing_atom(Binary)
     end.
 
 %% Reinterpret a module after reload so existing VSCode breakpoints keep working.
