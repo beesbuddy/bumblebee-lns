@@ -27,9 +27,10 @@ ensure_started(Dir) ->
     case whereis(?NAME) of
         undefined ->
             Pid = spawn(fun() -> run(Dir) end),
-            case catch register(?NAME, Pid) of
-                true -> ok;
-                {'EXIT', _} -> ok
+            try register(?NAME, Pid) of
+                true -> ok
+            catch
+                error:badarg -> ok
             end;
         _Pid ->
             ok
@@ -50,7 +51,10 @@ loop(Dir, State) ->
             {Changed, NextState} ->
                 lists:foreach(
                     fun(File) ->
-                        _ = (catch compile_and_load(File))
+                        try compile_and_load(File)
+                        catch
+                            _:_ -> ok
+                        end
                     end,
                     Changed
                 ),
@@ -152,7 +156,10 @@ module_from_file(File) ->
 maybe_reinterpret(true, Module) ->
     ensure_debugger_started(),
     %% Reload with the interpreter and reapply any existing breakpoints.
-    _ = (catch int:ni(Module)),
+    try int:ni(Module)
+    catch
+        _:_ -> ok
+    end,
     reapply_breakpoints(Module);
 maybe_reinterpret(false, _Module) ->
     ok.
@@ -160,22 +167,29 @@ maybe_reinterpret(false, _Module) ->
 ensure_debugger_started() ->
     case whereis(int) of
         undefined ->
-            _ = (catch int:start()),
+            try int:start()
+            catch
+                _:_ -> ok
+            end,
             ok;
         _ ->
             ok
     end.
 
 reapply_breakpoints(Module) ->
-    case catch int:all_breaks(Module) of
-        {'EXIT', _} ->
-            ok;
+    try int:all_breaks(Module) of
         Breaks ->
             lists:foreach(
                 fun({{_Mod, Line}, _Opts}) ->
-                    _ = (catch int:break(Module, Line))
+                    try int:break(Module, Line)
+                    catch
+                        _:_ -> ok
+                    end
                 end,
                 Breaks
             ),
+            ok
+    catch
+        _:_ ->
             ok
     end.
