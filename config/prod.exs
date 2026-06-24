@@ -1,3 +1,7 @@
 import Config
 
-config :bumblebee_lns, BumblebeeLnsWeb.Endpoint, server: true
+config :bumblebee_lns, BumblebeeLnsWeb.Endpoint,
+  cache_static_manifest: "priv/static/cache_manifest.json",
+  server: true
+
+config :logger, level: :info

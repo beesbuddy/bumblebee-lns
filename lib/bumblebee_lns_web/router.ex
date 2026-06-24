@@ -1,6 +1,6 @@
 defmodule BumblebeeLnsWeb.Router do
-  use Phoenix.Router
-  import Phoenix.LiveView.Router
+  use BumblebeeLnsWeb, :router
+  import Backpex.Router
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -14,7 +14,11 @@ defmodule BumblebeeLnsWeb.Router do
   scope "/", BumblebeeLnsWeb do
     pipe_through :browser
     live "/", DashboardLive, :index
-    live "/areas", AreaLive.Index, :index
-    live "/areas/:name/edit", AreaLive.Edit, :edit
+
+    live_session :admin, on_mount: Backpex.InitAssigns do
+      live_resources("/areas", AreaLive, only: [:index, :edit])
+    end
   end
+
+  backpex_routes()
 end

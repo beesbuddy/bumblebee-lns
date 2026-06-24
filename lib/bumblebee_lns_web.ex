@@ -1,4 +1,17 @@
 defmodule BumblebeeLnsWeb do
+  def static_paths, do: ~w(assets fonts images favicon.ico robots.txt)
+
+  def router do
+    quote do
+      use Phoenix.Router, helpers: false
+
+      # Import common connection and controller functions to use in pipelines
+      import Plug.Conn
+      import Phoenix.Controller
+      import Phoenix.LiveView.Router
+    end
+  end
+
   def live_view do
     quote do
       use Phoenix.LiveView

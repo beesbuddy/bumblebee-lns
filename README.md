@@ -111,8 +111,15 @@ development, changes to files under `src/` are compiled and loaded automatically
 
 ```bash
 mix deps.get
+npm install
+npm run assets:build
 mix phx.server
 ```
+
+The `/areas` administration resource is implemented with Backpex. Backpex uses
+Ecto schemas for its forms, while the custom Mnesia adapter keeps the existing
+Mnesia tables as the authoritative data store. During frontend development, run
+`npm run assets:watch` to rebuild the Tailwind and daisyUI stylesheet.
 
 The defaults are:
 

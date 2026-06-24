@@ -1,6 +1,11 @@
 import Config
 
+config :backpex,
+  translator_function: {BumblebeeLnsWeb.CoreComponents, :translate_backpex},
+  error_translator_function: {BumblebeeLnsWeb.CoreComponents, :translate_error}
+
 config :bumblebee_lns,
+  generators: [timestamp_type: :utc_datetime],
   applications: [{"semtech-mote", :bumblebee_application_semtech_mote}],
   connectors: [
     bumblebee_connector_amqp: ["amqp", "amqps"],
@@ -34,5 +39,34 @@ config :bumblebee_lns, BumblebeeLnsWeb.Endpoint,
   pubsub_server: BumblebeeLns.PubSub,
   live_view: [signing_salt: "bumblebee-live"],
   secret_key_base: "WmQ7Sx4nxp5tEuKFnq6g7hpsJr5ZkNjbzM8gYhEuQGf4HgJp7eVc2mKa8yPb6tRq"
+
+# Configure esbuild (the version is required)
+config :esbuild,
+  version: "0.25.4",
+  bumblebee_lns: [
+    args:
+      ~w(js/app.js --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/* --alias:@=.),
+    cd: Path.expand("../assets", __DIR__),
+    env: %{"NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]}
+  ]
+
+# Configure tailwind (the version is required)
+config :tailwind,
+  version: "4.1.12",
+  bumblebee_lns: [
+    args: ~w(
+      --input=assets/css/app.css
+      --output=priv/static/assets/css/app.css
+    ),
+    cd: Path.expand("..", __DIR__)
+  ]
+
+# Configure Elixir's Logger
+config :logger, :default_formatter,
+  format: "$time $metadata[$level] $message\n",
+  metadata: [:request_id]
+
+# Use Jason for JSON parsing in Phoenix
+config :phoenix, :json_library, Jason
 
 import_config "#{config_env()}.exs"

@@ -9,14 +9,21 @@ defmodule BumblebeeLns.MixProject do
     [
       app: :bumblebee_lns,
       version: "0.7.0",
-      elixir: "~> 1.15",
+      elixir: "~> 1.16",
+      elixirc_paths: elixirc_paths(Mix.env()),
       erlc_paths: ["src"],
+      aliases: aliases(),
       erlc_options: [:debug_info, :tuple_calls, {:parse_transform, :lager_transform}],
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      compilers: [:phoenix_live_view] ++ Mix.compilers(),
       listeners: [Phoenix.CodeReloader]
     ]
   end
+
+  # Specifies which paths to compile per environment.
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
 
   def application do
     [
@@ -34,11 +41,28 @@ defmodule BumblebeeLns.MixProject do
     ]
   end
 
+  def cli do
+    [
+      preferred_envs: [precommit: :test]
+    ]
+  end
+
   defp deps do
     [
       {:phoenix, "~> 1.8.0"},
       {:phoenix_live_view, "~> 1.1"},
+      {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_html, "~> 4.1"},
+      {:backpex, "~> 0.18.3"},
+      {:esbuild, "~> 0.10", runtime: Mix.env() == :dev},
+      {:tailwind, "~> 0.3", runtime: Mix.env() == :dev},
+      {:heroicons,
+       github: "tailwindlabs/heroicons",
+       tag: "v2.2.0",
+       sparse: "optimized",
+       app: false,
+       compile: false,
+       depth: 1},
       {:lazy_html, "~> 0.1.0", only: :test},
       {:plug_cowboy, "~> 2.8"},
       {:jason, "~> 1.4"},
@@ -60,6 +84,26 @@ defmodule BumblebeeLns.MixProject do
        git: "https://github.com/SergejJurecko/erlmongo.git",
        ref: "f0d03cd4592f7bf28059b81214b61c28ccf046c0"},
       {:prometheus_cowboy, "~> 0.2.0"}
+    ]
+  end
+
+  # Aliases are shortcuts or tasks specific to the current project.
+  # For example, to install project dependencies and perform other setup tasks, run:
+  #
+  #     $ mix setup
+  #
+  # See the documentation for `Mix` for more info on aliases.
+  defp aliases do
+    [
+      setup: ["deps.get", "assets.setup", "assets.build"],
+      "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
+      "assets.build": ["compile", "tailwind bumblebee_lns", "esbuild bumblebee_lns"],
+      "assets.deploy": [
+        "tailwind bumblebee_lns --minify",
+        "esbuild bumblebee_lns --minify",
+        "phx.digest"
+      ],
+      precommit: ["compile --warnings-as-errors", "deps.unlock --unused", "format", "test"]
     ]
   end
 end

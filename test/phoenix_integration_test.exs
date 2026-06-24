@@ -31,26 +31,26 @@ defmodule BumblebeeLns.PhoenixIntegrationTest do
   test "area list shows configured areas", %{area_name: area_name} do
     {:ok, _view, html} = live(build_conn(), "/areas")
 
-    assert html =~ "All configured LoRaWAN areas"
+    assert html =~ "Areas"
     assert html =~ area_name
-    assert html =~ "EU868"
+    assert html =~ "EU 863-870MHz"
   end
 
   test "area edit page persists changes", %{area_name: area_name} do
     {:ok, view, html} = live(build_conn(), "/areas/#{area_name}/edit")
 
-    assert html =~ "Edit area"
+    assert html =~ "Edit Area"
     assert html =~ area_name
 
     view
-    |> form("#area-form",
-      area: %{
+    |> form("#resource-form", %{
+      "change" => %{
         "region" => "US902",
         "slack_channel" => "#operations",
         "log_ignored" => "true"
       }
-    )
-    |> render_submit()
+    })
+    |> render_submit(%{"save-type" => "save"})
 
     assert_redirect(view, "/areas")
 

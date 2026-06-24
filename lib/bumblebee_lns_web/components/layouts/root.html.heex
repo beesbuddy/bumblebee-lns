@@ -1,31 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content={Plug.CSRFProtection.get_csrf_token()} />
     <title>Bumblebee LNS</title>
-    <script defer phx-track-static type="text/javascript" src="/assets/phoenix/phoenix.min.js">
-    </script>
-    <script
-      defer
-      phx-track-static
-      type="text/javascript"
-      src="/assets/live_view/phoenix_live_view.min.js"
-    >
-    </script>
-    <script>
-      window.addEventListener("DOMContentLoaded", () => {
-        const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content");
-        const liveSocket = new window.LiveView.LiveSocket("/live", window.Phoenix.Socket, {params: {_csrf_token: csrfToken}});
-        liveSocket.connect();
-        window.liveSocket = liveSocket;
-      });
+    <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
+    <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
     </script>
     <style>
       :root { font-family: system-ui, sans-serif; color: #172033; background: #f5f7fb; }
       body { margin: 0; }
-      main { max-width: 72rem; margin: 0 auto; padding: 2rem 1.5rem 3rem; }
+      .site-main { max-width: 72rem; margin: 0 auto; padding: 2rem 1.5rem 3rem; }
+      body:has(#backpex-app-shell) > .site-main { max-width: none; padding: 0; }
       h1 { margin-bottom: .5rem; }
       nav { background: #172033; color: white; }
       nav .nav-inner { max-width: 72rem; margin: 0 auto; padding: .9rem 1.5rem; display: flex; gap: 1.25rem; align-items: center; }
@@ -68,6 +55,6 @@
         <.link navigate={~p"/areas"}>Areas</.link>
       </div>
     </nav>
-    <main><.flash_group flash={@flash} />{@inner_content}</main>
+    <main class="site-main"><.flash_group flash={@flash} />{@inner_content}</main>
   </body>
 </html>

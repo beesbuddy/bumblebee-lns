@@ -1,5 +1,9 @@
 {
   "private": true,
+  "scripts": {
+    "assets:build": "tailwindcss -i assets/css/app.css -o priv/static/assets/app.css --minify",
+    "assets:watch": "tailwindcss -i assets/css/app.css -o priv/static/assets/app.css --watch"
+  },
   "dependencies": {
     "jquery": ">=1.0",
     "ng-admin": ">=1.0.7",
@@ -10,5 +14,10 @@
     "vis": "4.20.1",
     "angular-visjs": "4.16.0",
     "angular-bootstrap-colorpicker": "v3.0.32"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.0",
+    "daisyui": "^5.0.0",
+    "tailwindcss": "^4.1.0"
   }
 }
