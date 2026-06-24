@@ -26,29 +26,20 @@ import {hooks as colocatedHooks} from "phoenix-colocated/bumblebee_lns"
 import {Hooks as BackpexHooks} from "backpex"
 import topbar from "../vendor/topbar"
 
-const applyStoredBackpexTheme = () => {
-  const storedTheme = window.localStorage.getItem("backpexTheme")
-
-  if (storedTheme != null) {
-    document.documentElement.setAttribute("data-theme", storedTheme)
-  }
-}
+BackpexHooks.BackpexThemeSelector.setStoredTheme()
 
 const BackpexThemeSelector = {
   ...BackpexHooks.BackpexThemeSelector,
   mounted() {
-    applyStoredBackpexTheme()
     BackpexHooks.BackpexThemeSelector.mounted.call(this)
   },
 }
-
-applyStoredBackpexTheme()
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, ...BackpexHooks, BackpexThemeSelector},
+  hooks: {...colocatedHooks, ...BackpexHooks, ...BackpexThemeSelector},
 })
 
 // Show progress bar on live navigation and form submits
