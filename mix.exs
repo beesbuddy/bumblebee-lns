@@ -54,6 +54,7 @@ defmodule BumblebeeLns.MixProject do
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_html, "~> 4.1"},
       {:backpex, "~> 0.18.3"},
+      {:ecto, "~> 3.13"},
       {:esbuild, "~> 0.10", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.3", runtime: Mix.env() == :dev},
       {:heroicons,
