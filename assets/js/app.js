@@ -23,36 +23,41 @@ import "phoenix_html"
 import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/bumblebee_lns"
+import {Hooks as BackpexHooks} from "backpex"
 import topbar from "../vendor/topbar"
 
-const setTheme = (theme) => {
-  if (theme === "system") {
-    localStorage.removeItem("phx:theme")
-    document.documentElement.removeAttribute("data-theme")
-  } else {
-    localStorage.setItem("phx:theme", theme)
-    document.documentElement.setAttribute("data-theme", theme)
+const applyStoredBackpexTheme = () => {
+  const storedTheme = window.localStorage.getItem("backpexTheme")
+
+  if (storedTheme != null) {
+    document.documentElement.setAttribute("data-theme", storedTheme)
   }
 }
 
-if (!document.documentElement.hasAttribute("data-theme")) {
-  setTheme(localStorage.getItem("phx:theme") || "system")
+const BackpexThemeSelector = {
+  ...BackpexHooks.BackpexThemeSelector,
+  mounted() {
+    applyStoredBackpexTheme()
+    BackpexHooks.BackpexThemeSelector.mounted.call(this)
+  },
 }
 
-window.addEventListener("storage", e => e.key === "phx:theme" && setTheme(e.newValue || "system"))
-window.addEventListener("phx:set-theme", e => setTheme(e.target.dataset.phxTheme))
+applyStoredBackpexTheme()
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks},
+  hooks: {...colocatedHooks, ...BackpexHooks, BackpexThemeSelector},
 })
 
 // Show progress bar on live navigation and form submits
 topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})
 window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
-window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
+window.addEventListener("phx:page-loading-stop", _info => {
+  topbar.hide()
+  applyStoredBackpexTheme()
+})
 
 // connect if there are any LiveViews on the page
 liveSocket.connect()
