@@ -38,6 +38,39 @@ defmodule BumblebeeLns.PhoenixIntegrationTest do
     assert is_pid(Process.whereis(BumblebeeLnsWeb.Endpoint))
   end
 
+  test "dashboard shows migrated timeline, events, frames, and server tables" do
+    event_id = <<System.unique_integer([:positive])::64>>
+    frame_id = <<System.unique_integer([:positive])::64>>
+    devaddr = <<1, 2, 3, 4>>
+    occurred_at = :calendar.universal_time()
+
+    :ok =
+      :mnesia.dirty_write(
+        {:event, event_id, :error, occurred_at, occurred_at, 1, :server, node(), "Test incident",
+         "dashboard"}
+      )
+
+    :ok =
+      :mnesia.dirty_write(
+        {:rxframe, frame_id, "up", "test-network", "test-app", devaddr, :undefined, [],
+         :undefined, 14, 12, false, 1, <<1, 2, 3>>, occurred_at}
+      )
+
+    on_exit(fn ->
+      :mnesia.dirty_delete(:event, event_id)
+      :mnesia.dirty_delete(:rxframe, frame_id)
+    end)
+
+    {:ok, view, _html} = live(build_conn(), "/")
+
+    assert has_element?(view, "#dashboard-timeline")
+    assert has_element?(view, "#dashboard-servers")
+    assert has_element?(view, "#dashboard-events")
+    assert has_element?(view, "#dashboard-frames")
+    assert has_element?(view, "#dashboard-event-#{:bumblebee_utils.binary_to_hex(event_id)}")
+    assert has_element?(view, "#dashboard-frame-#{:bumblebee_utils.binary_to_hex(frame_id)}")
+  end
+
   test "area list shows configured areas", %{area_name: area_name} do
     {:ok, _view, html} = live(build_conn(), "/areas")
 
