@@ -33,6 +33,15 @@
 @source "../../deps/backpex/**/*.*ex";
 @source "../../deps/backpex/assets/js/**/*.*js";
 
+.app-sidebar-scrollbarless {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.app-sidebar-scrollbarless::-webkit-scrollbar {
+  display: none;
+}
+
 .gateway-location-map {
   z-index: 0;
   height: 20rem;

@@ -43,7 +43,7 @@ defmodule BumblebeeLnsWeb.Layouts do
           </li>
         </Backpex.HTML.Layout.topbar_dropdown>
       </:topbar>
-      <:sidebar>
+      <:sidebar class="app-sidebar-scrollbarless">
         <Backpex.HTML.Layout.sidebar_item current_url={@current_url} navigate={~p"/"}>
           <Backpex.HTML.CoreComponents.icon name="hero-home" class="size-5" /> Dashboard
         </Backpex.HTML.Layout.sidebar_item>
