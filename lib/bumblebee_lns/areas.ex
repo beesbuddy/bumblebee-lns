@@ -45,12 +45,22 @@ defmodule BumblebeeLns.Areas do
     |> Enum.sort_by(&String.downcase/1)
   end
 
+  def create_area(params) when is_map(params) do
+    with {:ok, attributes} <- validate(params),
+         :ok <- ensure_missing(attributes.name) do
+      record = area_record(attributes)
+
+      case :mnesia.transaction(fn -> :bumblebee_admin.write(record) end) do
+        {:atomic, :ok} -> {:ok, from_record(record)}
+        {:aborted, reason} -> {:error, %{base: "Could not save area: #{inspect(reason)}"}}
+      end
+    end
+  end
+
   def update_area(name, params) when is_binary(name) and is_map(params) do
     with {:ok, area} <- get_area(name),
          {:ok, attributes} <- validate(params) do
-      record =
-        {:area, name, attributes.region, attributes.admins, attributes.slack_channel,
-         attributes.log_ignored}
+      record = area_record(Map.put(attributes, :name, name))
 
       case :mnesia.transaction(fn -> :bumblebee_admin.write(record) end) do
         {:atomic, :ok} -> {:ok, Map.merge(area, attributes)}
@@ -60,17 +70,20 @@ defmodule BumblebeeLns.Areas do
   end
 
   defp validate(params) do
+    name = params |> Map.get("name", "") |> String.trim()
     region = params |> Map.get("region", "") |> String.trim()
     valid_regions = Enum.map(@regions, &elem(&1, 0))
 
     errors =
       %{}
+      |> add_error(name == "", :name, "Name is required")
       |> add_error(region == "", :region, "Region is required")
       |> add_error(region != "" and region not in valid_regions, :region, "Region is invalid")
 
     if map_size(errors) == 0 do
       {:ok,
        %{
+         name: name,
          region: region,
          admins: normalize_admins(Map.get(params, "admins", [])),
          slack_channel: normalize_optional(Map.get(params, "slack_channel")),
@@ -78,6 +91,18 @@ defmodule BumblebeeLns.Areas do
        }}
     else
       {:error, errors}
+    end
+  end
+
+  defp area_record(attributes) do
+    {:area, attributes.name, attributes.region, attributes.admins, attributes.slack_channel,
+     attributes.log_ignored}
+  end
+
+  defp ensure_missing(name) do
+    case :mnesia.dirty_read(:area, name) do
+      [] -> :ok
+      [_] -> {:error, %{name: "Area already exists"}}
     end
   end
 

@@ -24,6 +24,7 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/bumblebee_lns"
 import {Hooks as BackpexHooks} from "backpex"
+import L from "leaflet"
 import topbar from "../vendor/topbar"
 
 BackpexHooks.BackpexThemeSelector.setStoredTheme()
@@ -35,11 +36,115 @@ const BackpexThemeSelector = {
   },
 }
 
+const GatewayLocationMap = {
+  mounted() {
+    this.latitudeInput = document.getElementById(this.el.dataset.latitudeInput)
+    this.longitudeInput = document.getElementById(this.el.dataset.longitudeInput)
+
+    if (!this.latitudeInput || !this.longitudeInput) {
+      return
+    }
+
+    const position = this.currentPosition()
+    const hasPosition = position !== null
+    const center = position || [20, 0]
+
+    this.map = L.map(this.el, {scrollWheelZoom: false}).setView(center, hasPosition ? 13 : 2)
+
+    L.tileLayer(this.el.dataset.tileUrl, {
+      attribution: "&copy; OpenStreetMap contributors",
+      maxZoom: 19,
+    }).addTo(this.map)
+
+    this.marker = L.marker(center, {
+      draggable: true,
+      icon: L.divIcon({
+        className: "gateway-location-marker",
+        html: "<span></span>",
+        iconSize: [24, 24],
+        iconAnchor: [12, 12],
+      }),
+    }).addTo(this.map)
+
+    this.marker.on("dragend", () => this.setPosition(this.marker.getLatLng()))
+    this.map.on("click", event => this.setPosition(event.latlng))
+
+    this.onInputChanged = () => this.syncMarkerFromInputs()
+    this.latitudeInput.addEventListener("input", this.onInputChanged)
+    this.longitudeInput.addEventListener("input", this.onInputChanged)
+
+    requestAnimationFrame(() => this.map.invalidateSize())
+  },
+
+  updated() {
+    if (this.map) {
+      requestAnimationFrame(() => {
+        this.map.invalidateSize()
+        this.syncMarkerFromInputs()
+      })
+    }
+  },
+
+  destroyed() {
+    if (this.latitudeInput && this.onInputChanged) {
+      this.latitudeInput.removeEventListener("input", this.onInputChanged)
+    }
+
+    if (this.longitudeInput && this.onInputChanged) {
+      this.longitudeInput.removeEventListener("input", this.onInputChanged)
+    }
+
+    if (this.map) {
+      this.map.remove()
+    }
+  },
+
+  currentPosition() {
+    const latitude = Number.parseFloat(this.latitudeInput.value)
+    const longitude = Number.parseFloat(this.longitudeInput.value)
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      return null
+    }
+
+    return [latitude, longitude]
+  },
+
+  setPosition(latlng) {
+    const latitude = roundCoordinate(latlng.lat)
+    const longitude = roundCoordinate(latlng.lng)
+
+    this.latitudeInput.value = latitude
+    this.longitudeInput.value = longitude
+    this.marker.setLatLng([latitude, longitude])
+
+    dispatchInput(this.latitudeInput)
+    dispatchInput(this.longitudeInput)
+  },
+
+  syncMarkerFromInputs() {
+    const position = this.currentPosition()
+
+    if (position) {
+      this.marker.setLatLng(position)
+    }
+  },
+}
+
+function roundCoordinate(value) {
+  return Number.parseFloat(value).toFixed(6)
+}
+
+function dispatchInput(input) {
+  input.dispatchEvent(new Event("input", {bubbles: true}))
+  input.dispatchEvent(new Event("change", {bubbles: true}))
+}
+
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, ...BackpexHooks, ...BackpexThemeSelector},
+  hooks: {...colocatedHooks, ...BackpexHooks, ...BackpexThemeSelector, GatewayLocationMap},
 })
 
 // Show progress bar on live navigation and form submits

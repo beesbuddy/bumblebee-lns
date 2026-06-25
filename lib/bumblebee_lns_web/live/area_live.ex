@@ -11,6 +11,7 @@ defmodule BumblebeeLnsWeb.AreaLive do
       schema: Area,
       list: &Areas.list_areas/0,
       get: &Areas.get_area/1,
+      create: &Areas.create_area/1,
       update: &Areas.update_area/2,
       create_changeset: &Area.changeset/3,
       update_changeset: &Area.changeset/3
@@ -35,7 +36,7 @@ defmodule BumblebeeLnsWeb.AreaLive do
         module: Backpex.Fields.Text,
         label: "Name",
         searchable: true,
-        readonly: true
+        readonly: fn assigns -> assigns.live_action == :edit end
       },
       region: %{
         module: Backpex.Fields.Select,
@@ -65,5 +66,5 @@ defmodule BumblebeeLnsWeb.AreaLive do
   def item_actions(default_actions), do: Keyword.take(default_actions, [:edit])
 
   @impl Backpex.LiveResource
-  def can?(_assigns, action, _item), do: action in [:index, :edit]
+  def can?(_assigns, action, _item), do: action in [:index, :new, :edit]
 end

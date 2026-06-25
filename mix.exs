@@ -97,7 +97,11 @@ defmodule BumblebeeLns.MixProject do
   defp aliases do
     [
       setup: ["deps.get", "assets.setup", "assets.build"],
-      "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
+      "assets.setup": [
+        "cmd npm install --prefix assets",
+        "tailwind.install --if-missing",
+        "esbuild.install --if-missing"
+      ],
       "assets.build": ["compile", "tailwind bumblebee_lns", "esbuild bumblebee_lns"],
       "assets.deploy": [
         "tailwind bumblebee_lns --minify",

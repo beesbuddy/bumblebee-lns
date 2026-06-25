@@ -57,7 +57,7 @@ defmodule BumblebeeLnsWeb.Layouts do
             <Backpex.HTML.CoreComponents.icon name="hero-map" class="size-5" /> Areas
           </Backpex.HTML.Layout.sidebar_item>
 
-          <Backpex.HTML.Layout.sidebar_item current_url={@current_url} href="#">
+          <Backpex.HTML.Layout.sidebar_item current_url={@current_url} navigate={~p"/gateways"}>
             <Backpex.HTML.CoreComponents.icon name="hero-radio" class="size-5" /> Gateways
           </Backpex.HTML.Layout.sidebar_item>
 
@@ -92,7 +92,7 @@ defmodule BumblebeeLnsWeb.Layouts do
     [
       {"Light", "light"},
       {"Dark", "dark"},
-      {"Bumblebee", "bumblebee"},
+      {"Bumblebee", "bumblebee"}
     ]
   end
 end

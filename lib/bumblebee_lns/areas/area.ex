@@ -14,8 +14,9 @@ defmodule BumblebeeLns.Areas.Area do
 
   def changeset(area, attrs, _metadata \\ []) do
     area
-    |> cast(attrs, [:region, :admins, :slack_channel, :log_ignored])
-    |> validate_required([:region])
+    |> cast(attrs, [:name, :region, :admins, :slack_channel, :log_ignored])
+    |> update_change(:name, &normalize_name/1)
+    |> validate_required([:name, :region])
     |> validate_inclusion(:region, region_names())
     |> update_change(:admins, &normalize_admins/1)
     |> update_change(:slack_channel, &normalize_optional/1)
@@ -28,6 +29,9 @@ defmodule BumblebeeLns.Areas.Area do
   defp region_names do
     Enum.map(BumblebeeLns.Areas.regions(), &elem(&1, 0))
   end
+
+  defp normalize_name(nil), do: nil
+  defp normalize_name(name), do: name |> to_string() |> String.trim()
 
   defp normalize_admins(admins) do
     admins

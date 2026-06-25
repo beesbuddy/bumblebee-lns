@@ -10,6 +10,7 @@ defmodule BumblebeeLns.Backpex.MnesiaAdapter do
     schema: [type: :atom, required: true],
     list: [type: {:fun, 0}, required: true],
     get: [type: {:fun, 1}, required: true],
+    create: [type: {:fun, 1}],
     update: [type: {:fun, 2}, required: true],
     create_changeset: [type: {:fun, 3}, required: true],
     update_changeset: [type: {:fun, 3}, required: true]
@@ -86,8 +87,29 @@ defmodule BumblebeeLns.Backpex.MnesiaAdapter do
   end
 
   @impl Backpex.Adapter
-  def insert(changeset, _live_resource),
-    do: {:error, Ecto.Changeset.add_error(changeset, :base, "creation is not supported")}
+  def insert(%Ecto.Changeset{} = changeset, live_resource) do
+    create = live_resource.adapter_config(:create)
+
+    cond do
+      is_nil(create) ->
+        {:error, Ecto.Changeset.add_error(changeset, :base, "creation is not supported")}
+
+      changeset.valid? ->
+        attrs =
+          changeset
+          |> Ecto.Changeset.apply_changes()
+          |> Map.from_struct()
+          |> Map.new(fn {key, value} -> {to_string(key), value} end)
+
+        case create.(attrs) do
+          {:ok, created} -> {:ok, to_schema(created, live_resource)}
+          {:error, errors} -> {:error, add_errors(changeset, errors)}
+        end
+
+      true ->
+        {:error, changeset}
+    end
+  end
 
   @impl Backpex.Adapter
   def delete_all(_items, _live_resource), do: {:error, :not_supported}
