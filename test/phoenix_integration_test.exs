@@ -38,11 +38,13 @@ defmodule BumblebeeLns.PhoenixIntegrationTest do
     assert is_pid(Process.whereis(BumblebeeLnsWeb.Endpoint))
   end
 
-  test "dashboard shows migrated timeline, events, frames, and server tables" do
+  test "dashboard shows migrated traffic graph, events, frames, and server tables" do
     event_id = <<System.unique_integer([:positive])::64>>
     frame_id = <<System.unique_integer([:positive])::64>>
     devaddr = <<1, 2, 3, 4>>
     occurred_at = :calendar.universal_time()
+    server_name = node()
+    previous_server = :mnesia.dirty_read(:server, server_name)
 
     :ok =
       :mnesia.dirty_write(
@@ -56,19 +58,79 @@ defmodule BumblebeeLns.PhoenixIntegrationTest do
          :undefined, 14, 12, false, 1, <<1, 2, 3>>, occurred_at}
       )
 
+    :ok =
+      :mnesia.dirty_write({:server, server_name, [{occurred_at, {42, 3}}]})
+
     on_exit(fn ->
       :mnesia.dirty_delete(:event, event_id)
       :mnesia.dirty_delete(:rxframe, frame_id)
+
+      case previous_server do
+        [server] -> :mnesia.dirty_write(server)
+        [] -> :mnesia.dirty_delete(:server, server_name)
+      end
     end)
 
     {:ok, view, _html} = live(build_conn(), "/")
 
-    assert has_element?(view, "#dashboard-timeline")
+    assert has_element?(view, "#dashboard-traffic-graph")
+    assert has_element?(view, "#dashboard-router-traffic-svg")
+
+    assert has_element?(
+             view,
+             "#dashboard-traffic-graph-navigator[phx-hook='TrafficGraphNavigator']"
+           )
+
+    assert has_element?(view, "#dashboard-traffic-window-1h")
+    assert has_element?(view, "#dashboard-traffic-window-previous")
+    assert has_element?(view, "#dashboard-traffic-zoom-in")
+    assert has_element?(view, "#dashboard-traffic-zoom-out")
+
+    assert has_element?(
+             view,
+             "#dashboard-observability-event-#{:bumblebee_utils.binary_to_hex(event_id)}"
+           )
+
+    assert has_element?(
+             view,
+             "#dashboard-observability-frame-#{:bumblebee_utils.binary_to_hex(frame_id)}"
+           )
+
     assert has_element?(view, "#dashboard-servers")
     assert has_element?(view, "#dashboard-events")
     assert has_element?(view, "#dashboard-frames")
     assert has_element?(view, "#dashboard-event-#{:bumblebee_utils.binary_to_hex(event_id)}")
     assert has_element?(view, "#dashboard-frame-#{:bumblebee_utils.binary_to_hex(frame_id)}")
+
+    view
+    |> element("#dashboard-traffic-window-24h")
+    |> render_click()
+
+    assert has_element?(view, "#dashboard-router-traffic-svg")
+
+    view
+    |> element("#dashboard-traffic-zoom-in")
+    |> render_click()
+
+    assert has_element?(view, "#dashboard-traffic-window-6h.btn-primary")
+
+    view
+    |> element("#dashboard-traffic-zoom-out")
+    |> render_click()
+
+    assert has_element?(view, "#dashboard-traffic-window-24h.btn-primary")
+
+    view
+    |> element("#dashboard-traffic-graph-navigator")
+    |> render_hook("zoom_traffic_window", %{"direction" => "in"})
+
+    assert has_element?(view, "#dashboard-traffic-window-6h.btn-primary")
+
+    view
+    |> element("#dashboard-traffic-graph-navigator")
+    |> render_hook("zoom_traffic_interval", %{"start" => 0.75, "end" => 1.0, "mode" => "in"})
+
+    assert has_element?(view, "#dashboard-router-traffic-svg")
   end
 
   test "area list shows configured areas", %{area_name: area_name} do

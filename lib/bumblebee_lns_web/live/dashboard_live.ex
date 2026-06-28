@@ -4,19 +4,134 @@ defmodule BumblebeeLnsWeb.DashboardLive do
   alias BumblebeeLns.Dashboard
   alias BumblebeeLnsWeb.Layouts
 
+  @traffic_window_keys ~w(15m 1h 6h 24h 7d all)
+
   @impl true
   def mount(_params, _session, socket) do
-    summary = Dashboard.summary()
-
     {:ok,
-     assign(socket,
-       udp_port: Application.get_env(:bumblebee_lns, :packet_forwarder_listen, [])[:port],
-       node_name: node(),
-       servers: summary.servers,
-       events: summary.events,
-       frames: summary.frames,
-       timeline_items: summary.timeline_items
-     )}
+     socket
+     |> assign(:traffic_window_key, "1h")
+     |> assign(:traffic_window_offset, 0)
+     |> assign(:traffic_custom_window, nil)
+     |> assign_dashboard()}
+  end
+
+  @impl true
+  def handle_event("set_traffic_window", %{"window" => window}, socket) do
+    {:noreply,
+     socket
+     |> assign(:traffic_window_key, window)
+     |> assign(:traffic_window_offset, 0)
+     |> assign(:traffic_custom_window, nil)
+     |> assign_dashboard()}
+  end
+
+  def handle_event("shift_traffic_window", %{"direction" => direction}, socket) do
+    shift =
+      case direction do
+        "previous" -> -1
+        "next" -> 1
+        _ -> 0
+      end
+
+    socket =
+      if socket.assigns.traffic_custom_window do
+        window = socket.assigns.traffic_custom_window
+
+        assign(
+          socket,
+          :traffic_custom_window,
+          Dashboard.shift_traffic_window(window, shift * window.duration)
+        )
+      else
+        offset = min(socket.assigns.traffic_window_offset + shift, 0)
+        assign(socket, :traffic_window_offset, offset)
+      end
+
+    {:noreply, assign_dashboard(socket)}
+  end
+
+  def handle_event("reset_traffic_window", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:traffic_window_offset, 0)
+     |> assign(:traffic_custom_window, nil)
+     |> assign_dashboard()}
+  end
+
+  def handle_event("pan_traffic_window", %{"seconds" => seconds}, socket) do
+    with %{duration: duration} when is_integer(duration) <- socket.assigns.traffic_window,
+         {seconds, _rest} <- Float.parse(to_string(seconds)) do
+      socket =
+        if socket.assigns.traffic_custom_window do
+          window = Dashboard.shift_traffic_window(socket.assigns.traffic_custom_window, seconds)
+          assign(socket, :traffic_custom_window, window)
+        else
+          offset =
+            socket.assigns.traffic_window_offset
+            |> Kernel.+(seconds / duration)
+            |> min(0)
+
+          assign(socket, :traffic_window_offset, offset)
+        end
+
+      {:noreply, assign_dashboard(socket)}
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("zoom_traffic_window", %{"direction" => direction, "anchor" => anchor}, socket) do
+    with {anchor, _rest} <- Float.parse(to_string(anchor)),
+         %{duration: duration} when is_integer(duration) <- socket.assigns.traffic_window do
+      window =
+        socket.assigns.traffic_window
+        |> Dashboard.zoom_traffic_interval(anchor - 0.25, anchor + 0.25, direction)
+
+      {:noreply,
+       socket
+       |> assign(:traffic_window_key, "custom")
+       |> assign(:traffic_window_offset, 0)
+       |> assign(:traffic_custom_window, window)
+       |> assign_dashboard()}
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("zoom_traffic_window", %{"direction" => direction}, socket) do
+    window_key = adjacent_traffic_window(socket.assigns.traffic_window_key, direction)
+
+    {:noreply,
+     socket
+     |> assign(:traffic_window_key, window_key)
+     |> assign(:traffic_window_offset, 0)
+     |> assign(:traffic_custom_window, nil)
+     |> assign_dashboard()}
+  end
+
+  def handle_event("zoom_traffic_interval", params, socket) do
+    with {start_ratio, _rest} <- Float.parse(to_string(params["start"])),
+         {end_ratio, _rest} <- Float.parse(to_string(params["end"])) do
+      mode = Map.get(params, "mode", "in")
+
+      window =
+        Dashboard.zoom_traffic_interval(
+          socket.assigns.traffic_window,
+          start_ratio,
+          end_ratio,
+          mode
+        )
+
+      {:noreply,
+       socket
+       |> assign(:traffic_window_key, "custom")
+       |> assign(:traffic_window_offset, 0)
+       |> assign(:traffic_custom_window, window)
+       |> assign_dashboard()}
+    else
+      _ -> {:noreply, socket}
+    end
   end
 
   @impl true
@@ -56,45 +171,270 @@ defmodule BumblebeeLnsWeb.DashboardLive do
         </section>
 
         <section
-          id="dashboard-timeline"
+          id="dashboard-traffic-graph"
+          data-vega-lite-spec={Jason.encode!(@traffic_chart.vega_lite_spec)}
           class="bg-base-100 border-base-300 rounded-box border shadow-sm"
         >
           <div class="border-base-300 flex items-center justify-between border-b px-5 py-4">
             <div>
-              <h2 class="text-base-content text-lg font-semibold">Incident Timeline</h2>
-              <p class="text-base-content/60 text-sm">Recent incidents and frame activity</p>
+              <h2 class="text-base-content text-lg font-semibold">Observability Graph</h2>
+              <p class="text-base-content/60 text-sm">
+                Router traffic with incidents and frame activity over time
+              </p>
             </div>
-            <span class="badge badge-outline">{length(@timeline_items)} items</span>
-          </div>
-          <div class="overflow-x-auto p-5">
-            <div :if={@timeline_items == []} class="text-base-content/60 py-8 text-center text-sm">
-              No timeline activity available.
-            </div>
-            <ol :if={@timeline_items != []} class="flex min-w-max items-start gap-0">
-              <li
-                :for={item <- @timeline_items}
-                id={"timeline-item-#{item.id}"}
-                class="group relative flex w-48 flex-col items-center px-3"
+            <div class="flex flex-wrap items-center justify-end gap-2">
+              <button
+                id="dashboard-traffic-window-previous"
+                type="button"
+                class="btn btn-sm btn-ghost"
+                phx-click="shift_traffic_window"
+                phx-value-direction="previous"
+                disabled={@traffic_window.key == "all"}
               >
-                <div class="bg-base-300 absolute top-4 right-0 left-0 h-px group-first:left-1/2 group-last:right-1/2">
-                </div>
-                <div class={[
-                  "relative z-10 grid size-8 place-items-center rounded-full border-2 bg-base-100 shadow-sm",
-                  timeline_border_class(item)
-                ]}>
-                  <Backpex.HTML.CoreComponents.icon name={timeline_icon(item)} class="size-4" />
-                </div>
-                <time class="text-base-content/60 mt-2 text-xs font-medium">
-                  {Dashboard.format_timeline_time(item.started_at)}
-                </time>
-                <p class="text-base-content mt-1 max-w-40 truncate text-center text-sm font-semibold">
-                  {item.label}
-                </p>
-                <p class="text-base-content/60 max-w-40 truncate text-center text-xs">
-                  {item.detail}
-                </p>
-              </li>
-            </ol>
+                <Backpex.HTML.CoreComponents.icon name="hero-chevron-left" class="size-4" />
+              </button>
+              <button
+                :for={{key, label} <- @traffic_windows}
+                id={"dashboard-traffic-window-#{key}"}
+                type="button"
+                class={[
+                  "btn btn-sm",
+                  if(@traffic_window.key == key, do: "btn-primary", else: "btn-ghost")
+                ]}
+                phx-click="set_traffic_window"
+                phx-value-window={key}
+              >
+                {label}
+              </button>
+              <button
+                id="dashboard-traffic-window-next"
+                type="button"
+                class="btn btn-sm btn-ghost"
+                phx-click="shift_traffic_window"
+                phx-value-direction="next"
+                disabled={@traffic_window.key == "all" or @traffic_window.offset == 0}
+              >
+                <Backpex.HTML.CoreComponents.icon name="hero-chevron-right" class="size-4" />
+              </button>
+              <button
+                id="dashboard-traffic-zoom-in"
+                type="button"
+                class="btn btn-sm btn-ghost"
+                phx-click="zoom_traffic_window"
+                phx-value-direction="in"
+                disabled={@traffic_window.key == "15m"}
+              >
+                <Backpex.HTML.CoreComponents.icon name="hero-magnifying-glass-plus" class="size-4" />
+              </button>
+              <button
+                id="dashboard-traffic-zoom-out"
+                type="button"
+                class="btn btn-sm btn-ghost"
+                phx-click="zoom_traffic_window"
+                phx-value-direction="out"
+                disabled={@traffic_window.key == "all"}
+              >
+                <Backpex.HTML.CoreComponents.icon name="hero-magnifying-glass-minus" class="size-4" />
+              </button>
+              <button
+                id="dashboard-traffic-window-reset"
+                type="button"
+                class="btn btn-sm btn-outline"
+                phx-click="reset_traffic_window"
+                disabled={@traffic_window.key == "all" or @traffic_window.offset == 0}
+              >
+                Now
+              </button>
+            </div>
+          </div>
+          <div class="border-base-300 flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3">
+            <div class="text-base-content/70 text-sm">
+              <span :if={@traffic_window.key == "all"}>Showing all available telemetry</span>
+              <span :if={@traffic_window.key != "all"}>
+                {Dashboard.format_datetime(@traffic_window.start_at)} - {Dashboard.format_datetime(
+                  @traffic_window.end_at
+                )}
+              </span>
+            </div>
+            <div class="flex flex-wrap items-center gap-3">
+              <span class="inline-flex items-center gap-1.5 text-xs font-medium">
+                <span class="bg-primary size-2.5 rounded-full"></span> Requests
+              </span>
+              <span class="inline-flex items-center gap-1.5 text-xs font-medium">
+                <span class="bg-error size-2.5 rounded-full"></span> Errors
+              </span>
+              <span class="inline-flex items-center gap-1.5 text-xs font-medium">
+                <span class="bg-warning size-2.5 rounded-full"></span> Events
+              </span>
+              <span class="inline-flex items-center gap-1.5 text-xs font-medium">
+                <span class="bg-info size-2.5 rounded-full"></span> Frames
+              </span>
+            </div>
+          </div>
+          <div class="p-5">
+            <div
+              :if={!@traffic_chart.has_data?}
+              class="text-base-content/60 py-12 text-center text-sm"
+            >
+              No observability data available for this window.
+            </div>
+            <div
+              :if={@traffic_chart.has_data?}
+              id="dashboard-traffic-graph-navigator"
+              class="relative min-h-72 cursor-grab touch-pan-y select-none overflow-x-auto active:cursor-grabbing"
+              phx-hook="TrafficGraphNavigator"
+              data-window-key={@traffic_window.key}
+              data-window-duration={@traffic_window.duration}
+            >
+              <svg
+                id="dashboard-router-traffic-svg"
+                viewBox={"0 0 #{@traffic_chart.width} #{@traffic_chart.height}"}
+                role="img"
+                aria-labelledby="dashboard-router-traffic-title dashboard-router-traffic-desc"
+                class="h-72 min-w-[48rem] w-full"
+              >
+                <title id="dashboard-router-traffic-title">Router traffic graph</title>
+                <desc id="dashboard-router-traffic-desc">
+                  Line graph showing router requests and errors per minute with event and frame markers.
+                </desc>
+
+                <rect
+                  x={@traffic_chart.plot.x}
+                  y={@traffic_chart.plot.y}
+                  width={@traffic_chart.plot.width}
+                  height={@traffic_chart.plot.height}
+                  rx="10"
+                  class="fill-base-200/40"
+                />
+
+                <g :for={tick <- @traffic_chart.y_ticks}>
+                  <line
+                    x1={@traffic_chart.plot.x}
+                    x2={@traffic_chart.plot.right}
+                    y1={tick.y}
+                    y2={tick.y}
+                    class="stroke-base-300"
+                    stroke-width="1"
+                  />
+                  <text
+                    x={@traffic_chart.plot.x - 12}
+                    y={tick.y + 4}
+                    text-anchor="end"
+                    class="fill-base-content/60 text-[11px]"
+                  >
+                    {tick.value}
+                  </text>
+                </g>
+
+                <polyline
+                  points={@traffic_chart.requests_path}
+                  fill="none"
+                  class="stroke-primary"
+                  stroke-width="3"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <polyline
+                  points={@traffic_chart.errors_path}
+                  fill="none"
+                  class="stroke-error"
+                  stroke-width="3"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+
+                <g :for={point <- @traffic_chart.points}>
+                  <circle
+                    id={"dashboard-traffic-request-#{point.id}"}
+                    cx={point.x}
+                    cy={point.requests_y}
+                    r="4"
+                    class="fill-primary transition hover:r-5"
+                  >
+                    <title>
+                      {point.server} at {point.label}: {point.requests} requests/min
+                    </title>
+                  </circle>
+                  <circle
+                    id={"dashboard-traffic-error-#{point.id}"}
+                    cx={point.x}
+                    cy={point.errors_y}
+                    r="4"
+                    class="fill-error transition hover:r-5"
+                  >
+                    <title>
+                      {point.server} at {point.label}: {point.errors} errors/min
+                    </title>
+                  </circle>
+                </g>
+
+                <g :for={tick <- @traffic_chart.x_ticks}>
+                  <line
+                    x1={tick.x}
+                    x2={tick.x}
+                    y1={@traffic_chart.plot.bottom}
+                    y2={@traffic_chart.plot.bottom + 6}
+                    class="stroke-base-content/30"
+                    stroke-width="1"
+                  />
+                  <text
+                    x={tick.x}
+                    y={@traffic_chart.plot.bottom + 24}
+                    text-anchor="middle"
+                    class="fill-base-content/60 text-[11px]"
+                  >
+                    {tick.short_label}
+                  </text>
+                </g>
+
+                <line
+                  x1={@traffic_chart.plot.x}
+                  x2={@traffic_chart.plot.right}
+                  y1={@traffic_chart.height - 58}
+                  y2={@traffic_chart.height - 58}
+                  class="stroke-base-300"
+                  stroke-width="1"
+                />
+                <line
+                  x1={@traffic_chart.plot.x}
+                  x2={@traffic_chart.plot.right}
+                  y1={@traffic_chart.height - 34}
+                  y2={@traffic_chart.height - 34}
+                  class="stroke-base-300"
+                  stroke-width="1"
+                />
+                <text
+                  x={@traffic_chart.plot.x - 12}
+                  y={@traffic_chart.height - 42}
+                  text-anchor="end"
+                  class="fill-base-content/60 text-[11px]"
+                >
+                  Events
+                </text>
+                <text
+                  x={@traffic_chart.plot.x - 12}
+                  y={@traffic_chart.height - 18}
+                  text-anchor="end"
+                  class="fill-base-content/60 text-[11px]"
+                >
+                  Frames
+                </text>
+
+                <g :for={item <- @traffic_chart.observability_items}>
+                  <circle
+                    id={"dashboard-observability-#{item.kind}-#{item.id}"}
+                    cx={item.x}
+                    cy={item.y}
+                    r="5"
+                    class={["stroke-2 transition hover:r-6", item.class]}
+                  >
+                    <title>
+                      {item.icon}: {item.label} at {Dashboard.format_datetime(item.started_at)} ({item.detail})
+                    </title>
+                  </circle>
+                </g>
+              </svg>
+            </div>
           </div>
         </section>
 
@@ -244,15 +584,38 @@ defmodule BumblebeeLnsWeb.DashboardLive do
     """
   end
 
-  defp timeline_icon(%{kind: :frame}), do: "hero-arrows-right-left"
-  defp timeline_icon(%{severity: "error"}), do: "hero-exclamation-circle"
-  defp timeline_icon(%{severity: "warning"}), do: "hero-exclamation-triangle"
-  defp timeline_icon(_), do: "hero-information-circle"
+  defp assign_dashboard(socket) do
+    summary =
+      if socket.assigns.traffic_custom_window do
+        Dashboard.summary(socket.assigns.traffic_custom_window)
+      else
+        Dashboard.summary(socket.assigns.traffic_window_key, socket.assigns.traffic_window_offset)
+      end
 
-  defp timeline_border_class(%{kind: :frame}), do: "border-info text-info"
-  defp timeline_border_class(%{severity: "error"}), do: "border-error text-error"
-  defp timeline_border_class(%{severity: "warning"}), do: "border-warning text-warning"
-  defp timeline_border_class(_), do: "border-base-300 text-base-content/70"
+    assign(socket,
+      udp_port: Application.get_env(:bumblebee_lns, :packet_forwarder_listen, [])[:port],
+      node_name: node(),
+      servers: summary.servers,
+      events: summary.events,
+      frames: summary.frames,
+      traffic_windows: summary.traffic_windows,
+      traffic_window: summary.traffic_window,
+      traffic_chart: summary.traffic_chart
+    )
+  end
+
+  defp adjacent_traffic_window(current, direction) do
+    index = Enum.find_index(@traffic_window_keys, &(&1 == current)) || 1
+
+    next_index =
+      case direction do
+        "in" -> max(index - 1, 0)
+        "out" -> min(index + 1, length(@traffic_window_keys) - 1)
+        _ -> index
+      end
+
+    Enum.at(@traffic_window_keys, next_index)
+  end
 
   defp frame_badge_class("up"), do: "badge-success"
   defp frame_badge_class("down"), do: "badge-info"

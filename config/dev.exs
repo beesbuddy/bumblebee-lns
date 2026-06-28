@@ -16,16 +16,6 @@ config :bumblebee_lns, BumblebeeLnsWeb.Endpoint,
   ],
   check_origin: false,
   code_reloader: true,
-  debug_errors: true,
-  watchers: [
-    esbuild: {Esbuild, :install_and_run, [:bumblebee_lns, ~w(--sourcemap=inline --watch)]},
-    tailwind: {Tailwind, :install_and_run, [:bumblebee_lns, ~w(--watch)]}
-  ]
-
-config :logger, :console, format: "[$level] $message\n"
-
-# Reload browser tabs when matching files change.
-config :bumblebee_lns, BumblebeeLnsWeb.Endpoint,
   live_reload: [
     web_console_logger: true,
     patterns: [
@@ -37,7 +27,14 @@ config :bumblebee_lns, BumblebeeLnsWeb.Endpoint,
       ~r"lib/bumblebee_lns_web/router\.ex$",
       ~r"lib/bumblebee_lns_web/(controllers|live|components)/.*\.(ex|heex)$"
     ]
+  ],
+  debug_errors: true,
+  watchers: [
+    esbuild: {Esbuild, :install_and_run, [:bumblebee_lns, ~w(--sourcemap=inline --watch)]},
+    tailwind: {Tailwind, :install_and_run, [:bumblebee_lns, ~w(--watch)]}
   ]
+
+config :logger, :console, format: "[$level] $message\n"
 
 # Enable dev routes for dashboard and mailbox
 config :bumblebee_lns, dev_routes: true

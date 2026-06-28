@@ -2,6 +2,19 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "type": "mix_task",
+      "request": "launch",
+      "name": "Elixir server",
+      "task": "phx.server",
+      "taskArgs": [],
+      "projectDir": "${workspaceRoot}",
+      "debugAutoInterpretAllModules": false,
+      "debugInterpretModulesPatterns": [
+        "BumblebeeLns*"
+      ],
+      "exitAfterTaskReturns": false
+    },
+    {
       "name": "Attach to node devel@localhost",
       "type": "erlang-edb",
       "request": "attach",

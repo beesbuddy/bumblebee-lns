@@ -131,6 +131,249 @@ const GatewayLocationMap = {
   },
 }
 
+const TrafficGraphNavigator = {
+  mounted() {
+    this.drag = null
+    this.selection = null
+    this.selectionEl = null
+    this.wheelTimer = null
+
+    this.onPointerDown = event => {
+      if (event.button !== 0 || !this.canNavigate()) {
+        return
+      }
+
+      const ratio = this.pointerRatio(event)
+      if (ratio === null) {
+        return
+      }
+
+      if (event.shiftKey) {
+        event.preventDefault()
+        this.selection = {
+          pointerId: event.pointerId,
+          startRatio: ratio,
+          endRatio: ratio,
+          mode: event.altKey ? "out" : "in",
+        }
+        this.showSelection()
+        this.updateSelection(ratio)
+        this.el.setPointerCapture(event.pointerId)
+        return
+      }
+
+      this.drag = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        lastX: event.clientX,
+        moved: false,
+      }
+
+      this.el.setPointerCapture(event.pointerId)
+      this.el.classList.add("cursor-grabbing")
+    }
+
+    this.onPointerMove = event => {
+      if (!this.drag || event.pointerId !== this.drag.pointerId) {
+        if (this.selection && event.pointerId === this.selection.pointerId) {
+          event.preventDefault()
+          const ratio = this.pointerRatio(event)
+          if (ratio !== null) {
+            this.selection.endRatio = ratio
+            this.updateSelection(ratio)
+          }
+        }
+        return
+      }
+
+      this.drag.lastX = event.clientX
+      this.drag.moved = this.drag.moved || Math.abs(this.drag.lastX - this.drag.startX) > 4
+    }
+
+    this.onPointerUp = event => {
+      if (!this.drag || event.pointerId !== this.drag.pointerId) {
+        if (this.selection && event.pointerId === this.selection.pointerId) {
+          this.finishSelection(event)
+        }
+        return
+      }
+
+      const drag = this.drag
+      this.drag = null
+      this.el.classList.remove("cursor-grabbing")
+
+      if (this.el.hasPointerCapture(event.pointerId)) {
+        this.el.releasePointerCapture(event.pointerId)
+      }
+
+      const deltaX = event.clientX - drag.startX
+      if (!drag.moved || Math.abs(deltaX) < 12) {
+        return
+      }
+
+      const duration = this.windowDuration()
+      const width = this.chartWidth()
+      if (!duration || !width) {
+        return
+      }
+
+      const seconds = Math.round((-deltaX / width) * duration)
+      if (seconds !== 0) {
+        this.pushEvent("pan_traffic_window", {seconds})
+      }
+    }
+
+    this.onPointerCancel = event => {
+      if (this.drag && event.pointerId === this.drag.pointerId) {
+        this.drag = null
+        this.el.classList.remove("cursor-grabbing")
+      }
+
+      if (this.selection && event.pointerId === this.selection.pointerId) {
+        this.clearSelection()
+      }
+    }
+
+    this.onWheel = event => {
+      if (!this.canNavigate()) {
+        return
+      }
+
+      if (Math.abs(event.deltaY) < Math.abs(event.deltaX)) {
+        return
+      }
+
+      event.preventDefault()
+
+      window.clearTimeout(this.wheelTimer)
+      this.wheelTimer = window.setTimeout(() => {
+        const direction = event.deltaY < 0 ? "in" : "out"
+        const anchor = this.pointerRatio(event)
+        this.pushEvent("zoom_traffic_window", {direction, anchor: anchor ?? 0.5})
+      }, 80)
+    }
+
+    this.onDoubleClick = event => {
+      if (!this.canNavigate()) {
+        return
+      }
+
+      const anchor = this.pointerRatio(event)
+      if (anchor === null) {
+        return
+      }
+
+      event.preventDefault()
+      this.pushEvent("zoom_traffic_window", {
+        direction: event.shiftKey || event.altKey ? "out" : "in",
+        anchor,
+      })
+    }
+
+    this.el.addEventListener("pointerdown", this.onPointerDown)
+    this.el.addEventListener("pointermove", this.onPointerMove)
+    this.el.addEventListener("pointerup", this.onPointerUp)
+    this.el.addEventListener("pointercancel", this.onPointerCancel)
+    this.el.addEventListener("wheel", this.onWheel, {passive: false})
+    this.el.addEventListener("dblclick", this.onDoubleClick)
+  },
+
+  destroyed() {
+    window.clearTimeout(this.wheelTimer)
+    this.clearSelection()
+    this.el.removeEventListener("pointerdown", this.onPointerDown)
+    this.el.removeEventListener("pointermove", this.onPointerMove)
+    this.el.removeEventListener("pointerup", this.onPointerUp)
+    this.el.removeEventListener("pointercancel", this.onPointerCancel)
+    this.el.removeEventListener("wheel", this.onWheel)
+    this.el.removeEventListener("dblclick", this.onDoubleClick)
+  },
+
+  canNavigate() {
+    return this.el.dataset.windowKey !== "all" && Number.isFinite(this.windowDuration())
+  },
+
+  windowDuration() {
+    const duration = Number.parseFloat(this.el.dataset.windowDuration)
+    return Number.isFinite(duration) && duration > 0 ? duration : null
+  },
+
+  chartWidth() {
+    const svg = this.el.querySelector("svg")
+    const width = svg?.getBoundingClientRect().width || this.el.getBoundingClientRect().width
+    return width > 0 ? width : null
+  },
+
+  chartRect() {
+    return this.el.querySelector("svg")?.getBoundingClientRect() || this.el.getBoundingClientRect()
+  },
+
+  pointerRatio(event) {
+    const rect = this.chartRect()
+    if (!rect || rect.width <= 0) {
+      return null
+    }
+
+    return Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width))
+  },
+
+  showSelection() {
+    if (this.selectionEl) {
+      return
+    }
+
+    const element = document.createElement("div")
+    element.style.position = "absolute"
+    element.style.top = "0"
+    element.style.bottom = "0"
+    element.style.border = "1px solid color-mix(in oklab, var(--color-primary) 70%, transparent)"
+    element.style.background = "color-mix(in oklab, var(--color-primary) 16%, transparent)"
+    element.style.pointerEvents = "none"
+    element.style.zIndex = "2"
+    this.selectionEl = element
+    this.el.appendChild(element)
+  },
+
+  updateSelection(ratio) {
+    if (!this.selection || !this.selectionEl) {
+      return
+    }
+
+    const start = Math.min(this.selection.startRatio, ratio) * 100
+    const end = Math.max(this.selection.startRatio, ratio) * 100
+    this.selectionEl.style.left = `${start}%`
+    this.selectionEl.style.width = `${Math.max(0.4, end - start)}%`
+    this.selectionEl.style.background =
+      this.selection.mode === "out"
+        ? "color-mix(in oklab, var(--color-warning) 18%, transparent)"
+        : "color-mix(in oklab, var(--color-primary) 16%, transparent)"
+  },
+
+  finishSelection(event) {
+    const selection = this.selection
+    const ratio = this.pointerRatio(event)
+    this.clearSelection()
+
+    if (!selection || ratio === null || Math.abs(ratio - selection.startRatio) < 0.02) {
+      return
+    }
+
+    this.pushEvent("zoom_traffic_interval", {
+      start: selection.startRatio,
+      end: ratio,
+      mode: selection.mode,
+    })
+  },
+
+  clearSelection() {
+    this.selection = null
+    if (this.selectionEl) {
+      this.selectionEl.remove()
+      this.selectionEl = null
+    }
+  },
+}
+
 function roundCoordinate(value) {
   return Number.parseFloat(value).toFixed(6)
 }
@@ -144,7 +387,13 @@ const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, ...BackpexHooks, ...BackpexThemeSelector, GatewayLocationMap},
+  hooks: {
+    ...colocatedHooks,
+    ...BackpexHooks,
+    ...BackpexThemeSelector,
+    GatewayLocationMap,
+    TrafficGraphNavigator,
+  },
 })
 
 // Show progress bar on live navigation and form submits
