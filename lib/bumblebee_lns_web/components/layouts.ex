@@ -53,6 +53,10 @@ defmodule BumblebeeLnsWeb.Layouts do
             <Backpex.HTML.CoreComponents.icon name="hero-signal" class="size-5" /> Network
           </:label>
 
+          <Backpex.HTML.Layout.sidebar_item current_url={@current_url} navigate={~p"/networks"}>
+            <Backpex.HTML.CoreComponents.icon name="hero-cloud" class="size-5" /> Networks
+          </Backpex.HTML.Layout.sidebar_item>
+
           <Backpex.HTML.Layout.sidebar_item current_url={@current_url} navigate={~p"/areas"}>
             <Backpex.HTML.CoreComponents.icon name="hero-map" class="size-5" /> Areas
           </Backpex.HTML.Layout.sidebar_item>

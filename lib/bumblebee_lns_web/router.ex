@@ -17,6 +17,7 @@ defmodule BumblebeeLnsWeb.Router do
 
     live_session :admin, on_mount: Backpex.InitAssigns do
       live "/", DashboardLive, :index
+      live_resources("/networks", NetworkLive, only: [:index, :new, :edit])
       live_resources("/areas", AreaLive, only: [:index, :new, :edit])
       live_resources("/gateways", GatewayLive, only: [:index, :new, :edit])
       live_resources("/groups", GroupLive, only: [:index, :new, :edit])
