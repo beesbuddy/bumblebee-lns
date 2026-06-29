@@ -49,11 +49,12 @@ defmodule BumblebeeLnsWeb.GroupLive do
         readonly: fn assigns -> assigns.live_action == :edit end
       },
       network: %{
-        module: Backpex.Fields.Select,
+        module: BumblebeeLnsWeb.Backpex.Fields.Select,
         label: "Network",
         prompt: "Select network",
         help_text: "Network this group belongs to. Profiles inherit network behavior through the group.",
         panel: :general,
+        searchable: true,
         options: fn _assigns -> Devices.list_network_options() end
       },
       admins: %{
