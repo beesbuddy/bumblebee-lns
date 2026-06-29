@@ -85,7 +85,7 @@ defmodule BumblebeeLns.Backpex.MnesiaAdapter do
           {:error, add_errors(changeset, errors)}
       end
     else
-      {:error, changeset}
+      {:error, mark_error_fields_used(changeset)}
     end
   end
 
@@ -114,7 +114,7 @@ defmodule BumblebeeLns.Backpex.MnesiaAdapter do
         end
 
       true ->
-        {:error, changeset}
+        {:error, mark_error_fields_used(changeset)}
     end
   end
 
@@ -181,6 +181,13 @@ defmodule BumblebeeLns.Backpex.MnesiaAdapter do
     Ecto.Changeset.add_error(changeset, :base, normalize_error_message(reason))
   end
 
+  defp mark_error_fields_used(%Ecto.Changeset{} = changeset) do
+    Enum.reduce(changeset.errors, changeset, fn
+      {:base, _error}, acc -> acc
+      {field, _error}, acc -> mark_field_used(acc, field)
+    end)
+  end
+
   defp add_field_error(%Ecto.Changeset{} = changeset, field, messages) when is_list(messages) do
     if charlist?(messages) do
       add_field_error(changeset, field, normalize_error_message(messages))
@@ -196,11 +203,19 @@ defmodule BumblebeeLns.Backpex.MnesiaAdapter do
 
     case normalize_error_field(field, known_fields(changeset)) do
       {:ok, field} ->
-        Ecto.Changeset.add_error(changeset, field, message)
+        changeset
+        |> mark_field_used(field)
+        |> Ecto.Changeset.add_error(field, message)
 
       :error ->
         Ecto.Changeset.add_error(changeset, :base, "#{normalize_error_label(field)}: #{message}")
     end
+  end
+
+  defp mark_field_used(%Ecto.Changeset{params: nil} = changeset, _field), do: changeset
+
+  defp mark_field_used(%Ecto.Changeset{params: params} = changeset, field) when is_map(params) do
+    %{changeset | params: Map.delete(params, "_unused_#{field}")}
   end
 
   defp normalize_error_field(field, known_fields) when is_atom(field) do

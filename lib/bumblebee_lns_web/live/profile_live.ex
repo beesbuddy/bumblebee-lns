@@ -40,8 +40,9 @@ defmodule BumblebeeLnsWeb.ProfileLive do
         readonly: fn assigns -> assigns.live_action == :edit end
       },
       group: %{
-        module: Backpex.Fields.Select,
+        module: BumblebeeLnsWeb.Backpex.Fields.Select,
         label: "Group",
+        prompt: "Select group",
         options: fn _assigns -> Devices.list_group_options() end
       },
       app: %{module: Backpex.Fields.Text, label: "Application", searchable: true},

@@ -170,6 +170,34 @@ defmodule BumblebeeLns.PhoenixIntegrationTest do
            ] = :mnesia.dirty_read(:area, new_area_name)
   end
 
+  test "profile new page shows group field validation errors" do
+    profile_name = "invalid-profile-#{System.unique_integer([:positive])}"
+
+    on_exit(fn ->
+      :mnesia.dirty_delete(:profile, profile_name)
+    end)
+
+    {:ok, view, _html} = live(build_conn(), "/profiles/new")
+
+    assert has_element?(view, "#resource-form")
+
+    html =
+      view
+      |> form("#resource-form", %{
+        "change" => %{
+          "name" => profile_name,
+          "group" => "",
+          "app" => "test-app",
+          "join" => "1",
+          "adr_mode" => "0"
+        }
+      })
+      |> render_submit(%{"save-type" => "save"})
+
+    assert html =~ "There are errors in the form."
+    assert html =~ "can&#39;t be blank"
+  end
+
   test "area edit page persists changes", %{area_name: area_name} do
     {:ok, view, html} = live(build_conn(), "/areas/#{area_name}/edit")
 
