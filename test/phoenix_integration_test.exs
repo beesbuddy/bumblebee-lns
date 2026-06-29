@@ -198,6 +198,83 @@ defmodule BumblebeeLns.PhoenixIntegrationTest do
     assert html =~ "can&#39;t be blank"
   end
 
+  test "profile form groups fields and explains accepted values" do
+    {:ok, view, _html} = live(build_conn(), "/profiles/new")
+
+    assert has_element?(view, "#resource-form legend", "General")
+    assert has_element?(view, "#resource-form legend", "Activation")
+    assert has_element?(view, "#resource-form legend", "ADR")
+    assert has_element?(view, "#resource-form legend", "Status")
+    assert has_element?(view, "#resource-form input[placeholder='default-profile']")
+    assert has_element?(view, "#resource-form input[placeholder='16384']")
+    assert has_element?(view, "#resource-form input[placeholder='5']")
+    assert has_element?(view, "#resource-form", "ABP uses existing session keys")
+  end
+
+  test "profile group field is searchable" do
+    group_name = "searchable-group-#{System.unique_integer([:positive])}"
+
+    :ok =
+      :mnesia.dirty_write({:group, group_name, "test-network", :undefined, [], :undefined, false})
+
+    on_exit(fn ->
+      :mnesia.dirty_delete(:group, group_name)
+    end)
+
+    {:ok, view, _html} = live(build_conn(), "/profiles/new")
+
+    assert has_element?(
+             view,
+             "#resource-form [data-searchable-select] input[type='hidden'][name='change[group]'][data-searchable-select-value]"
+           )
+
+    assert has_element?(
+             view,
+             "#resource-form [data-searchable-select] input[type='text'][data-searchable-select-input]"
+           )
+
+    assert has_element?(
+             view,
+             "#resource-form [data-searchable-select] button[data-value='#{group_name}']"
+           )
+  end
+
+  test "profile create context rejects group values that do not exist in mnesia" do
+    profile_name = "missing-group-profile-#{System.unique_integer([:positive])}"
+
+    on_exit(fn ->
+      :mnesia.dirty_delete(:profile, profile_name)
+    end)
+
+    assert {:error, %{group: "does not exist"}} =
+             BumblebeeLns.Devices.create_profile(%{
+               "name" => profile_name,
+               "group" => "group-that-does-not-exist",
+               "app" => "test-app",
+               "join" => "1",
+               "adr_mode" => "0"
+             })
+
+    assert [] = :mnesia.dirty_read(:profile, profile_name)
+  end
+
+  test "group form groups fields and explains accepted values" do
+    {:ok, view, _html} = live(build_conn(), "/groups/new")
+
+    assert has_element?(view, "#resource-form legend", "General")
+    assert has_element?(view, "#resource-form legend", "Access")
+    assert has_element?(view, "#resource-form legend", "Notifications")
+    assert has_element?(view, "#resource-form input[placeholder='#lorawan-alerts']")
+
+    assert has_element?(
+             view,
+             "#resource-form",
+             "Allow devices in this group to complete OTAA joins"
+           )
+
+    assert has_element?(view, "#resource-form", "Use a channel name such as #lorawan-alerts")
+  end
+
   test "area edit page persists changes", %{area_name: area_name} do
     {:ok, view, html} = live(build_conn(), "/areas/#{area_name}/edit")
 

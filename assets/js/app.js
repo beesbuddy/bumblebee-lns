@@ -383,6 +383,177 @@ function dispatchInput(input) {
   input.dispatchEvent(new Event("change", {bubbles: true}))
 }
 
+function enhanceBackpexFormTabs(root = document) {
+  const forms = Array.from(root.querySelectorAll ? root.querySelectorAll("#resource-form") : [])
+
+  for (const form of forms) {
+    if (form.dataset.backpexTabsEnhanced === "true" && form.querySelector(".backpex-form-tabs")) {
+      continue
+    }
+
+    const panelContainer = form.querySelector(".card-body > div:first-child")
+    if (!panelContainer) {
+      continue
+    }
+
+    const fieldsets = Array.from(panelContainer.querySelectorAll(":scope > fieldset")).filter(
+      fieldset => fieldset.querySelector("[data-field-name], input, select, textarea")
+    )
+
+    const labeledFieldsets = fieldsets.filter(fieldset => fieldset.querySelector("legend"))
+    if (fieldsets.length < 2 || labeledFieldsets.length < 2) {
+      continue
+    }
+
+    const tabs = document.createElement("div")
+    tabs.className = "backpex-form-tabs"
+    tabs.setAttribute("role", "tablist")
+    tabs.setAttribute("aria-label", "Form sections")
+
+    const activate = activeIndex => {
+      fieldsets.forEach((fieldset, index) => {
+        const active = index === activeIndex
+        fieldset.hidden = !active
+        fieldset.classList.toggle("backpex-form-tab-panel-active", active)
+      })
+
+      Array.from(tabs.children).forEach((tab, index) => {
+        const active = index === activeIndex
+        tab.classList.toggle("backpex-form-tab-active", active)
+        tab.setAttribute("aria-selected", active ? "true" : "false")
+        tab.tabIndex = active ? 0 : -1
+      })
+    }
+
+    fieldsets.forEach((fieldset, index) => {
+      const legend = fieldset.querySelector("legend")
+      const label = (legend?.textContent || `Section ${index + 1}`).trim()
+
+      if (legend) {
+        legend.classList.add("sr-only")
+      }
+
+      const tab = document.createElement("button")
+      tab.type = "button"
+      tab.className = "backpex-form-tab"
+      tab.textContent = label
+      tab.setAttribute("role", "tab")
+      tab.addEventListener("click", () => activate(index))
+      tabs.appendChild(tab)
+    })
+
+    panelContainer.prepend(tabs)
+    form.dataset.backpexTabsEnhanced = "true"
+    activate(0)
+  }
+}
+
+function scheduleBackpexFormTabsEnhancement() {
+  window.requestAnimationFrame(() => enhanceBackpexFormTabs())
+}
+
+function enhanceSearchableSelects(root = document) {
+  const selects = Array.from(
+    root.querySelectorAll ? root.querySelectorAll("[data-searchable-select]") : []
+  )
+
+  for (const select of selects) {
+    if (select.dataset.searchableSelectEnhanced === "true") {
+      continue
+    }
+
+    const input = select.querySelector("[data-searchable-select-input]")
+    const hiddenInput = select.querySelector("[data-searchable-select-value]")
+    const options = select.querySelector(".backpex-searchable-select-options")
+    const optionButtons = Array.from(select.querySelectorAll(".backpex-searchable-select-option"))
+    const empty = select.querySelector(".backpex-searchable-select-empty")
+
+    if (!input || !hiddenInput || !options || optionButtons.length === 0) {
+      continue
+    }
+
+    let selectedLabel = input.value
+
+    const open = () => {
+      options.hidden = false
+      input.setAttribute("aria-expanded", "true")
+      filterOptions()
+    }
+
+    const close = () => {
+      options.hidden = true
+      input.setAttribute("aria-expanded", "false")
+    }
+
+    const filterOptions = () => {
+      const query = input.value.trim().toLowerCase()
+      let visibleCount = 0
+
+      for (const option of optionButtons) {
+        const optionText = option.textContent.trim().toLowerCase()
+        const optionValue = String(option.dataset.value || "").toLowerCase()
+        const visible = query === "" || optionText.includes(query) || optionValue.includes(query)
+
+        option.hidden = !visible
+        if (visible) {
+          visibleCount += 1
+        }
+      }
+
+      if (empty) {
+        empty.hidden = visibleCount !== 0
+      }
+    }
+
+    input.addEventListener("focus", open)
+    input.addEventListener("input", () => {
+      if (input.value !== selectedLabel) {
+        hiddenInput.value = ""
+        selectedLabel = ""
+      }
+
+      open()
+    })
+
+    input.addEventListener("blur", () => {
+      window.setTimeout(() => {
+        if (hiddenInput.value === "") {
+          input.value = ""
+        }
+      }, 150)
+    })
+
+    input.addEventListener("keydown", event => {
+      if (event.key === "Escape") {
+        close()
+      }
+    })
+
+    for (const option of optionButtons) {
+      option.addEventListener("mousedown", event => {
+        event.preventDefault()
+        selectedLabel = option.querySelector("span")?.textContent.trim() || option.dataset.value || ""
+        input.value = selectedLabel
+        hiddenInput.value = option.dataset.value || ""
+        dispatchInput(hiddenInput)
+        close()
+      })
+    }
+
+    document.addEventListener("mousedown", event => {
+      if (!select.contains(event.target)) {
+        close()
+      }
+    })
+
+    select.dataset.searchableSelectEnhanced = "true"
+  }
+}
+
+function scheduleSearchableSelectEnhancement() {
+  window.requestAnimationFrame(() => enhanceSearchableSelects())
+}
+
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
@@ -402,6 +573,19 @@ window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
 window.addEventListener("phx:page-loading-stop", _info => {
   topbar.hide()
   applyStoredBackpexTheme()
+  scheduleBackpexFormTabsEnhancement()
+  scheduleSearchableSelectEnhancement()
+})
+
+window.addEventListener("DOMContentLoaded", scheduleBackpexFormTabsEnhancement)
+window.addEventListener("DOMContentLoaded", scheduleSearchableSelectEnhancement)
+
+new MutationObserver(() => {
+  scheduleBackpexFormTabsEnhancement()
+  scheduleSearchableSelectEnhancement()
+}).observe(document.body, {
+  childList: true,
+  subtree: true,
 })
 
 // connect if there are any LiveViews on the page

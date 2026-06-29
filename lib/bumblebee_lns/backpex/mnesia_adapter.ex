@@ -142,7 +142,7 @@ defmodule BumblebeeLns.Backpex.MnesiaAdapter do
   end
 
   @impl Backpex.Adapter
-  def update_all(_items, _updates, _live_resource), do: :error
+  def update_all(_, _, _), do: :error
 
   defp changeset_function(:new, live_resource),
     do: live_resource.adapter_config(:create_changeset)

@@ -110,7 +110,6 @@ defmodule BumblebeeLns.Devices do
   def delete_group(name), do: delete(:group, name, &group_from_record/1)
 
   def create_profile(params) do
-    IO.inspect("Create profile")
     create(:profile, params, &validate_profile/1, &profile_record/1)
   end
 
@@ -289,6 +288,7 @@ defmodule BumblebeeLns.Devices do
       |> required(:name, name)
       |> required(:group, group)
       |> required(:app, app)
+      |> existing(:group, group, :group)
 
     with {:ok, join} <- parse_integer(Map.get(params, "join", 1), :join),
          {:ok, adr_mode} <- parse_integer(Map.get(params, "adr_mode", 0), :adr_mode),
@@ -472,8 +472,26 @@ defmodule BumblebeeLns.Devices do
     Enum.reduce(keys, map, fn key, acc -> Map.update(acc, key, "", &optional_to_string/1) end)
   end
 
-  defp required(errors, field, value),
-    do: if(value in [nil, ""], do: Map.put(errors, field, "is required"), else: errors)
+  defp required(errors, field, nil) do
+    Map.put(errors, field, "is required")
+  end
+
+  defp required(errors, field, "") do
+    Map.put(errors, field, "is required")
+  end
+
+  defp required(errors, _field, _value) do
+    errors
+  end
+
+  defp existing(errors, _field, value, _table) when value in [nil, ""], do: errors
+
+  defp existing(errors, field, value, table) do
+    case :mnesia.dirty_read(table, value) do
+      [_record] -> errors
+      [] -> Map.put_new(errors, field, "does not exist")
+    end
+  end
 
   defp parse_hex(nil, field, _size), do: {:error, %{field => "is required"}}
 
