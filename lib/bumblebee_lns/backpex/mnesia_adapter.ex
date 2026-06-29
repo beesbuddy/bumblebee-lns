@@ -1,9 +1,6 @@
 defmodule BumblebeeLns.Backpex.MnesiaAdapter do
   @moduledoc """
   Backpex data-layer adapter for contexts backed by Mnesia.
-
-  Backpex still uses Ecto schemas and changesets for forms, but persistence stays
-  in the existing Mnesia context.
   """
 
   @config_schema [
@@ -12,6 +9,7 @@ defmodule BumblebeeLns.Backpex.MnesiaAdapter do
     get: [type: {:fun, 1}, required: true],
     create: [type: {:fun, 1}],
     update: [type: {:fun, 2}, required: true],
+    delete: [type: {:fun, 1}],
     create_changeset: [type: {:fun, 3}, required: true],
     update_changeset: [type: {:fun, 3}, required: true]
   ]
@@ -62,11 +60,13 @@ defmodule BumblebeeLns.Backpex.MnesiaAdapter do
       field_options.module.before_changeset(changeset, attrs, metadata, nil, field, assigns)
     end)
     |> changeset_function.(attrs, metadata)
-    |> Map.put(:action, action)
+    |> with_action(action)
   end
 
   @impl Backpex.Adapter
   def update(%Ecto.Changeset{} = changeset, live_resource) do
+    changeset = with_action(changeset, :update)
+
     if changeset.valid? do
       item = Ecto.Changeset.apply_changes(changeset)
 
@@ -78,8 +78,11 @@ defmodule BumblebeeLns.Backpex.MnesiaAdapter do
       primary_value = Map.fetch!(item, live_resource.config(:primary_key))
 
       case live_resource.adapter_config(:update).(primary_value, attrs) do
-        {:ok, updated} -> {:ok, to_schema(updated, live_resource)}
-        {:error, errors} -> {:error, add_errors(changeset, errors)}
+        {:ok, updated} ->
+          {:ok, to_schema(updated, live_resource)}
+
+        {:error, errors} ->
+          {:error, add_errors(changeset, errors)}
       end
     else
       {:error, changeset}
@@ -88,6 +91,7 @@ defmodule BumblebeeLns.Backpex.MnesiaAdapter do
 
   @impl Backpex.Adapter
   def insert(%Ecto.Changeset{} = changeset, live_resource) do
+    changeset = with_action(changeset, :insert)
     create = live_resource.adapter_config(:create)
 
     cond do
@@ -102,8 +106,11 @@ defmodule BumblebeeLns.Backpex.MnesiaAdapter do
           |> Map.new(fn {key, value} -> {to_string(key), value} end)
 
         case create.(attrs) do
-          {:ok, created} -> {:ok, to_schema(created, live_resource)}
-          {:error, errors} -> {:error, add_errors(changeset, errors)}
+          {:ok, created} ->
+            {:ok, to_schema(created, live_resource)}
+
+          {:error, errors} ->
+            {:error, add_errors(changeset, errors)}
         end
 
       true ->
@@ -112,7 +119,27 @@ defmodule BumblebeeLns.Backpex.MnesiaAdapter do
   end
 
   @impl Backpex.Adapter
-  def delete_all(_items, _live_resource), do: {:error, :not_supported}
+  def delete_all(items, live_resource) do
+    delete = live_resource.adapter_config(:delete)
+    primary_key = live_resource.config(:primary_key)
+
+    if is_nil(delete) do
+      {:error, :not_supported}
+    else
+      deleted_items =
+        Enum.flat_map(items, fn item ->
+          primary_value = Map.fetch!(item, primary_key)
+
+          case delete.(primary_value) do
+            {:ok, deleted} -> [to_schema(deleted, live_resource)]
+            {:error, :not_found} -> []
+            {:error, reason} -> raise "Could not delete item: #{inspect(reason)}"
+          end
+        end)
+
+      {:ok, deleted_items}
+    end
+  end
 
   @impl Backpex.Adapter
   def update_all(_items, _updates, _live_resource), do: :error
@@ -120,7 +147,109 @@ defmodule BumblebeeLns.Backpex.MnesiaAdapter do
   defp changeset_function(:new, live_resource),
     do: live_resource.adapter_config(:create_changeset)
 
-  defp changeset_function(_, live_resource), do: live_resource.adapter_config(:update_changeset)
+  defp changeset_function(_, live_resource),
+    do: live_resource.adapter_config(:update_changeset)
+
+  defp with_action(%Ecto.Changeset{} = changeset, action) do
+    %{changeset | action: changeset.action || action}
+  end
+
+  defp add_errors(%Ecto.Changeset{} = changeset, errors) when is_map(errors) do
+    Enum.reduce(errors, changeset, fn {field, message}, acc ->
+      add_field_error(acc, field, message)
+    end)
+  end
+
+  defp add_errors(%Ecto.Changeset{} = changeset, errors) when is_list(errors) do
+    cond do
+      keyword_errors?(errors) ->
+        Enum.reduce(errors, changeset, fn {field, message}, acc ->
+          add_field_error(acc, field, message)
+        end)
+
+      charlist?(errors) ->
+        Ecto.Changeset.add_error(changeset, :base, normalize_error_message(errors))
+
+      true ->
+        Enum.reduce(errors, changeset, fn message, acc ->
+          Ecto.Changeset.add_error(acc, :base, normalize_error_message(message))
+        end)
+    end
+  end
+
+  defp add_errors(%Ecto.Changeset{} = changeset, reason) do
+    Ecto.Changeset.add_error(changeset, :base, normalize_error_message(reason))
+  end
+
+  defp add_field_error(%Ecto.Changeset{} = changeset, field, messages) when is_list(messages) do
+    if charlist?(messages) do
+      add_field_error(changeset, field, normalize_error_message(messages))
+    else
+      Enum.reduce(messages, changeset, fn message, acc ->
+        add_field_error(acc, field, message)
+      end)
+    end
+  end
+
+  defp add_field_error(%Ecto.Changeset{} = changeset, field, message) do
+    message = normalize_error_message(message)
+
+    case normalize_error_field(field, known_fields(changeset)) do
+      {:ok, field} ->
+        Ecto.Changeset.add_error(changeset, field, message)
+
+      :error ->
+        Ecto.Changeset.add_error(changeset, :base, "#{normalize_error_label(field)}: #{message}")
+    end
+  end
+
+  defp normalize_error_field(field, known_fields) when is_atom(field) do
+    if field in known_fields, do: {:ok, field}, else: :error
+  end
+
+  defp normalize_error_field(field, known_fields) when is_binary(field) do
+    Enum.find_value(known_fields, :error, fn known_field ->
+      if Atom.to_string(known_field) == field, do: {:ok, known_field}
+    end)
+  end
+
+  defp normalize_error_field(field, known_fields) when is_list(field) do
+    if charlist?(field), do: normalize_error_field(to_string(field), known_fields), else: :error
+  end
+
+  defp normalize_error_field(_field, _known_fields), do: :error
+
+  defp normalize_error_label(field) when is_atom(field), do: Atom.to_string(field)
+  defp normalize_error_label(field) when is_binary(field), do: field
+
+  defp normalize_error_label(field) when is_list(field) do
+    if charlist?(field), do: to_string(field), else: inspect(field)
+  end
+
+  defp normalize_error_label(field), do: inspect(field)
+
+  defp known_fields(%Ecto.Changeset{data: data}) do
+    data.__struct__.__schema__(:fields) ++ data.__struct__.__schema__(:virtual_fields)
+  end
+
+  defp keyword_errors?(errors), do: Enum.all?(errors, &field_error?/1)
+
+  defp field_error?({field, _message})
+       when is_atom(field) or is_binary(field) or is_list(field),
+       do: true
+
+  defp field_error?(_error), do: false
+
+  defp charlist?([]), do: false
+  defp charlist?(value), do: List.ascii_printable?(value)
+
+  defp normalize_error_message(message) when is_binary(message), do: message
+
+  defp normalize_error_message(message) when is_list(message) do
+    if charlist?(message), do: to_string(message), else: inspect(message)
+  end
+
+  defp normalize_error_message(message), do: inspect(message)
 
   defp to_schema(%schema{} = item, live_resource) do
     if schema == live_resource.adapter_config(:schema),
@@ -155,7 +284,13 @@ defmodule BumblebeeLns.Backpex.MnesiaAdapter do
   defp apply_order(items, nil), do: items
 
   defp apply_order(items, %{by: field, direction: direction}) do
-    sorter = fn item -> item |> Map.get(field) |> searchable_value() |> String.downcase() end
+    sorter = fn item ->
+      item
+      |> Map.get(field)
+      |> searchable_value()
+      |> String.downcase()
+    end
+
     Enum.sort_by(items, sorter, if(direction == :desc, do: :desc, else: :asc))
   end
 
@@ -164,13 +299,4 @@ defmodule BumblebeeLns.Backpex.MnesiaAdapter do
   defp apply_pagination(items, %{page: page, size: size}) do
     Enum.slice(items, (page - 1) * size, size)
   end
-
-  defp add_errors(changeset, errors) when is_map(errors) do
-    Enum.reduce(errors, changeset, fn {field, message}, acc ->
-      Ecto.Changeset.add_error(acc, field, message)
-    end)
-  end
-
-  defp add_errors(changeset, reason),
-    do: Ecto.Changeset.add_error(changeset, :base, inspect(reason))
 end

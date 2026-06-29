@@ -66,6 +66,33 @@ defmodule BumblebeeLnsWeb.Layouts do
           </Backpex.HTML.Layout.sidebar_item>
         </Backpex.HTML.Layout.sidebar_section>
 
+        <Backpex.HTML.Layout.sidebar_section id="devices">
+          <:label>
+            <Backpex.HTML.CoreComponents.icon name="hero-cube-transparent" class="size-5" /> Devices
+          </:label>
+
+          <Backpex.HTML.Layout.sidebar_item current_url={@current_url} navigate={~p"/groups"}>
+            <Backpex.HTML.CoreComponents.icon name="hero-squares-2x2" class="size-5" /> Groups
+          </Backpex.HTML.Layout.sidebar_item>
+
+          <Backpex.HTML.Layout.sidebar_item current_url={@current_url} navigate={~p"/profiles"}>
+            <Backpex.HTML.CoreComponents.icon name="hero-adjustments-horizontal" class="size-5" />
+            Profiles
+          </Backpex.HTML.Layout.sidebar_item>
+
+          <Backpex.HTML.Layout.sidebar_item current_url={@current_url} navigate={~p"/devices"}>
+            <Backpex.HTML.CoreComponents.icon name="hero-cube" class="size-5" /> Commissioned
+          </Backpex.HTML.Layout.sidebar_item>
+
+          <Backpex.HTML.Layout.sidebar_item current_url={@current_url} navigate={~p"/nodes"}>
+            <Backpex.HTML.CoreComponents.icon name="hero-rss" class="size-5" /> Activated
+          </Backpex.HTML.Layout.sidebar_item>
+
+          <Backpex.HTML.Layout.sidebar_item current_url={@current_url} navigate={~p"/ignored_nodes"}>
+            <Backpex.HTML.CoreComponents.icon name="hero-no-symbol" class="size-5" /> Ignored
+          </Backpex.HTML.Layout.sidebar_item>
+        </Backpex.HTML.Layout.sidebar_section>
+
         <Backpex.HTML.Layout.sidebar_section id="operations">
           <:label>
             <Backpex.HTML.CoreComponents.icon name="hero-wrench-screwdriver" class="size-5" />

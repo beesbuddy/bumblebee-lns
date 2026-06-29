@@ -19,6 +19,11 @@ defmodule BumblebeeLnsWeb.Router do
       live "/", DashboardLive, :index
       live_resources("/areas", AreaLive, only: [:index, :new, :edit])
       live_resources("/gateways", GatewayLive, only: [:index, :new, :edit])
+      live_resources("/groups", GroupLive, only: [:index, :new, :edit])
+      live_resources("/profiles", ProfileLive, only: [:index, :new, :edit])
+      live_resources("/devices", DeviceLive, only: [:index, :new, :edit])
+      live_resources("/nodes", NodeLive, only: [:index, :new, :edit])
+      live_resources("/ignored_nodes", IgnoredNodeLive, only: [:index, :new, :edit])
     end
 
     backpex_routes()
