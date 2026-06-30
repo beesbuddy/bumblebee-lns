@@ -139,20 +139,11 @@ defmodule BumblebeeLnsWeb.DashboardLive do
     ~H"""
     <Layouts.admin flash={@flash} socket={@socket} current_url={@current_url}>
       <div id="dashboard-page" class="space-y-6 pb-8">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <%!-- <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p class="text-base-content/60 text-sm font-medium">Runtime overview</p>
-            <h1 class="text-base-content text-3xl font-semibold">Bumblebee LNS</h1>
+            <h1 class="text-base-content text-3xl font-semibold">Dashboard</h1>
           </div>
-          <div class="flex flex-wrap gap-2">
-            <.link navigate={~p"/areas"} class="btn btn-primary">
-              <Backpex.HTML.CoreComponents.icon name="hero-map" class="size-5" /> Manage areas
-            </.link>
-            <.link navigate={~p"/gateways"} class="btn btn-outline">
-              <Backpex.HTML.CoreComponents.icon name="hero-radio" class="size-5" /> Gateways
-            </.link>
-          </div>
-        </div>
+        </div> --%>
 
         <section class="grid gap-4 md:grid-cols-3">
           <.status_card
@@ -172,7 +163,6 @@ defmodule BumblebeeLnsWeb.DashboardLive do
 
         <section
           id="dashboard-traffic-graph"
-          data-vega-lite-spec={Jason.encode!(@traffic_chart.vega_lite_spec)}
           class="bg-base-100 border-base-300 rounded-box border shadow-sm"
         >
           <div class="border-base-300 flex items-center justify-between border-b px-5 py-4">
@@ -285,155 +275,22 @@ defmodule BumblebeeLnsWeb.DashboardLive do
               phx-hook="TrafficGraphNavigator"
               data-window-key={@traffic_window.key}
               data-window-duration={@traffic_window.duration}
+              data-chart-spec={Jason.encode!(@traffic_chart.chart_spec)}
             >
-              <svg
-                id="dashboard-router-traffic-svg"
-                viewBox={"0 0 #{@traffic_chart.width} #{@traffic_chart.height}"}
-                role="img"
-                aria-labelledby="dashboard-router-traffic-title dashboard-router-traffic-desc"
+              <canvas
+                id="dashboard-router-traffic-chart"
                 class="h-72 min-w-[48rem] w-full"
-              >
-                <title id="dashboard-router-traffic-title">Router traffic graph</title>
-                <desc id="dashboard-router-traffic-desc">
-                  Line graph showing router requests and errors per minute with event and frame markers.
-                </desc>
-
-                <rect
-                  x={@traffic_chart.plot.x}
-                  y={@traffic_chart.plot.y}
-                  width={@traffic_chart.plot.width}
-                  height={@traffic_chart.plot.height}
-                  rx="10"
-                  class="fill-base-200/40"
-                />
-
-                <g :for={tick <- @traffic_chart.y_ticks}>
-                  <line
-                    x1={@traffic_chart.plot.x}
-                    x2={@traffic_chart.plot.right}
-                    y1={tick.y}
-                    y2={tick.y}
-                    class="stroke-base-300"
-                    stroke-width="1"
-                  />
-                  <text
-                    x={@traffic_chart.plot.x - 12}
-                    y={tick.y + 4}
-                    text-anchor="end"
-                    class="fill-base-content/60 text-[11px]"
-                  >
-                    {tick.value}
-                  </text>
-                </g>
-
-                <polyline
-                  points={@traffic_chart.requests_path}
-                  fill="none"
-                  class="stroke-primary"
-                  stroke-width="3"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-                <polyline
-                  points={@traffic_chart.errors_path}
-                  fill="none"
-                  class="stroke-error"
-                  stroke-width="3"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-
-                <g :for={point <- @traffic_chart.points}>
-                  <circle
-                    id={"dashboard-traffic-request-#{point.id}"}
-                    cx={point.x}
-                    cy={point.requests_y}
-                    r="4"
-                    class="fill-primary transition hover:r-5"
-                  >
-                    <title>
-                      {point.server} at {point.label}: {point.requests} requests/min
-                    </title>
-                  </circle>
-                  <circle
-                    id={"dashboard-traffic-error-#{point.id}"}
-                    cx={point.x}
-                    cy={point.errors_y}
-                    r="4"
-                    class="fill-error transition hover:r-5"
-                  >
-                    <title>
-                      {point.server} at {point.label}: {point.errors} errors/min
-                    </title>
-                  </circle>
-                </g>
-
-                <g :for={tick <- @traffic_chart.x_ticks}>
-                  <line
-                    x1={tick.x}
-                    x2={tick.x}
-                    y1={@traffic_chart.plot.bottom}
-                    y2={@traffic_chart.plot.bottom + 6}
-                    class="stroke-base-content/30"
-                    stroke-width="1"
-                  />
-                  <text
-                    x={tick.x}
-                    y={@traffic_chart.plot.bottom + 24}
-                    text-anchor="middle"
-                    class="fill-base-content/60 text-[11px]"
-                  >
-                    {tick.short_label}
-                  </text>
-                </g>
-
-                <line
-                  x1={@traffic_chart.plot.x}
-                  x2={@traffic_chart.plot.right}
-                  y1={@traffic_chart.height - 58}
-                  y2={@traffic_chart.height - 58}
-                  class="stroke-base-300"
-                  stroke-width="1"
-                />
-                <line
-                  x1={@traffic_chart.plot.x}
-                  x2={@traffic_chart.plot.right}
-                  y1={@traffic_chart.height - 34}
-                  y2={@traffic_chart.height - 34}
-                  class="stroke-base-300"
-                  stroke-width="1"
-                />
-                <text
-                  x={@traffic_chart.plot.x - 12}
-                  y={@traffic_chart.height - 42}
-                  text-anchor="end"
-                  class="fill-base-content/60 text-[11px]"
+                role="img"
+                aria-label="Line chart showing router requests and errors per minute with event and frame markers."
+              ></canvas>
+              <div id="dashboard-observability-markers" class="sr-only">
+                <span
+                  :for={item <- @traffic_chart.observability_items}
+                  id={"dashboard-observability-#{item.kind}-#{item.id}"}
                 >
-                  Events
-                </text>
-                <text
-                  x={@traffic_chart.plot.x - 12}
-                  y={@traffic_chart.height - 18}
-                  text-anchor="end"
-                  class="fill-base-content/60 text-[11px]"
-                >
-                  Frames
-                </text>
-
-                <g :for={item <- @traffic_chart.observability_items}>
-                  <circle
-                    id={"dashboard-observability-#{item.kind}-#{item.id}"}
-                    cx={item.x}
-                    cy={item.y}
-                    r="5"
-                    class={["stroke-2 transition hover:r-6", item.class]}
-                  >
-                    <title>
-                      {item.icon}: {item.label} at {Dashboard.format_datetime(item.started_at)} ({item.detail})
-                    </title>
-                  </circle>
-                </g>
-              </svg>
+                  {item.kind}: {item.label} at {Dashboard.format_datetime(item.started_at)}
+                </span>
+              </div>
             </div>
           </div>
         </section>

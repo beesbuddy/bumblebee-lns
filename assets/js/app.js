@@ -26,6 +26,28 @@ import {hooks as colocatedHooks} from "phoenix-colocated/bumblebee_lns"
 import {Hooks as BackpexHooks} from "backpex"
 import L from "leaflet"
 import topbar from "../vendor/topbar"
+import {
+  Chart,
+  Filler,
+  Legend,
+  LinearScale,
+  LineController,
+  LineElement,
+  PointElement,
+  ScatterController,
+  Tooltip,
+} from "chart.js"
+
+Chart.register(
+  Filler,
+  Legend,
+  LinearScale,
+  LineController,
+  LineElement,
+  PointElement,
+  ScatterController,
+  Tooltip
+)
 
 BackpexHooks.BackpexThemeSelector.setStoredTheme()
 
@@ -137,6 +159,8 @@ const TrafficGraphNavigator = {
     this.selection = null
     this.selectionEl = null
     this.wheelTimer = null
+    this.chart = null
+    this.renderChart()
 
     this.onPointerDown = event => {
       if (event.button !== 0 || !this.canNavigate()) {
@@ -281,12 +305,17 @@ const TrafficGraphNavigator = {
   destroyed() {
     window.clearTimeout(this.wheelTimer)
     this.clearSelection()
+    this.destroyChart()
     this.el.removeEventListener("pointerdown", this.onPointerDown)
     this.el.removeEventListener("pointermove", this.onPointerMove)
     this.el.removeEventListener("pointerup", this.onPointerUp)
     this.el.removeEventListener("pointercancel", this.onPointerCancel)
     this.el.removeEventListener("wheel", this.onWheel)
     this.el.removeEventListener("dblclick", this.onDoubleClick)
+  },
+
+  updated() {
+    this.renderChart()
   },
 
   canNavigate() {
@@ -299,13 +328,13 @@ const TrafficGraphNavigator = {
   },
 
   chartWidth() {
-    const svg = this.el.querySelector("svg")
-    const width = svg?.getBoundingClientRect().width || this.el.getBoundingClientRect().width
+    const canvas = this.el.querySelector("canvas")
+    const width = canvas?.getBoundingClientRect().width || this.el.getBoundingClientRect().width
     return width > 0 ? width : null
   },
 
   chartRect() {
-    return this.el.querySelector("svg")?.getBoundingClientRect() || this.el.getBoundingClientRect()
+    return this.el.querySelector("canvas")?.getBoundingClientRect() || this.el.getBoundingClientRect()
   },
 
   pointerRatio(event) {
@@ -372,6 +401,290 @@ const TrafficGraphNavigator = {
       this.selectionEl = null
     }
   },
+
+  renderChart() {
+    const canvas = this.el.querySelector("canvas")
+    const spec = parseChartSpec(this.el.dataset.chartSpec)
+
+    if (!canvas || !spec) {
+      this.destroyChart()
+      return
+    }
+
+    this.destroyChart()
+    this.chart = new Chart(canvas, trafficChartConfig(spec, this.el))
+  },
+
+  destroyChart() {
+    if (this.chart) {
+      this.chart.destroy()
+      this.chart = null
+    }
+  },
+}
+
+const trafficLanePlugin = {
+  id: "trafficLanePlugin",
+  afterDatasetsDraw(chart) {
+    const {ctx, chartArea} = chart
+    const laneColor = chart.options.plugins.trafficLanes?.laneColor || "#d1d5db"
+    const labelColor = chart.options.plugins.trafficLanes?.labelColor || "#6b7280"
+    const lanes = [
+      {label: "Events", ratio: 0.16},
+      {label: "Frames", ratio: 0.06},
+    ]
+
+    ctx.save()
+    ctx.lineWidth = 1
+    ctx.strokeStyle = laneColor
+    ctx.fillStyle = labelColor
+    ctx.font = "11px sans-serif"
+    ctx.textAlign = "left"
+    ctx.textBaseline = "middle"
+
+    for (const lane of lanes) {
+      const y = chart.scales.y.getPixelForValue(chart.scales.y.max * lane.ratio)
+      if (y < chartArea.top || y > chartArea.bottom) {
+        continue
+      }
+
+      ctx.beginPath()
+      ctx.moveTo(chartArea.left, y)
+      ctx.lineTo(chartArea.right, y)
+      ctx.stroke()
+      ctx.fillText(lane.label, chartArea.left + 8, y - 10)
+    }
+
+    ctx.restore()
+  },
+}
+
+Chart.register(trafficLanePlugin)
+
+function parseChartSpec(value) {
+  if (!value) {
+    return null
+  }
+
+  try {
+    return JSON.parse(value)
+  } catch (_error) {
+    return null
+  }
+}
+
+function trafficChartConfig(spec, element) {
+  const style = getComputedStyle(document.documentElement)
+  const colors = {
+    primary: cssColor(style, "--color-primary", "#2563eb"),
+    error: cssColor(style, "--color-error", "#dc2626"),
+    warning: cssColor(style, "--color-warning", "#d97706"),
+    info: cssColor(style, "--color-info", "#0891b2"),
+    baseContent: cssColor(style, "--color-base-content", "#111827"),
+    base300: cssColor(style, "--color-base-300", "#d1d5db"),
+  }
+  const values = spec.data?.values || []
+  const observability = spec.observability?.values || []
+  const yMax = Math.max(4, Number(spec.bounds?.y_max) || 4)
+
+  return {
+    type: "line",
+    data: {
+      datasets: [
+        lineDataset(values, "Requests per min", "Requests", colors.primary),
+        lineDataset(values, "Errors per min", "Errors", colors.error),
+        markerDataset(observability, "event", "Events", yMax * 0.16, colors),
+        markerDataset(observability, "frame", "Frames", yMax * 0.06, colors),
+      ].filter(dataset => dataset.data.length > 0),
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      normalized: true,
+      parsing: false,
+      interaction: {
+        intersect: false,
+        mode: "nearest",
+      },
+      layout: {
+        padding: {
+          top: 10,
+          right: 14,
+          bottom: 4,
+          left: 4,
+        },
+      },
+      scales: {
+        x: {
+          type: "linear",
+          min: timestampValue(spec.bounds?.start),
+          max: timestampValue(spec.bounds?.end),
+          grid: {
+            color: alphaColor(colors.base300, 0.7),
+          },
+          ticks: {
+            color: alphaColor(colors.baseContent, 0.65),
+            callback: value => formatChartTime(value),
+            maxTicksLimit: 6,
+          },
+        },
+        y: {
+          min: 0,
+          max: yMax,
+          ticks: {
+            stepSize: Math.max(1, yMax / 4),
+            precision: 0,
+            color: alphaColor(colors.baseContent, 0.65),
+          },
+          grid: {
+            color: alphaColor(colors.base300, 0.85),
+          },
+        },
+      },
+      plugins: {
+        legend: {
+          display: false,
+        },
+        tooltip: {
+          callbacks: {
+            title(items) {
+              const raw = items[0]?.raw
+              return raw?.timestamp ? formatChartDateTime(raw.timestamp) : ""
+            },
+            label(item) {
+              const raw = item.raw || {}
+
+              if (raw.kind) {
+                return `${raw.icon}: ${raw.label}${raw.detail ? ` (${raw.detail})` : ""}`
+              }
+
+              return `${item.dataset.label}: ${raw.y}`
+            },
+          },
+        },
+        trafficLanes: {
+          laneColor: alphaColor(colors.base300, 0.9),
+          labelColor: alphaColor(colors.baseContent, 0.55),
+        },
+      },
+    },
+  }
+}
+
+function lineDataset(values, metric, label, color) {
+  return {
+    type: "line",
+    label,
+    data: values
+      .filter(value => value.metric === metric)
+      .map(value => ({
+        x: timestampValue(value.timestamp),
+        y: value.value,
+        timestamp: value.timestamp,
+        server: value.server,
+      }))
+      .filter(value => Number.isFinite(value.x)),
+    borderColor: color,
+    backgroundColor: color,
+    borderWidth: 3,
+    pointRadius: 3,
+    pointHoverRadius: 5,
+    tension: 0.35,
+  }
+}
+
+function markerDataset(values, kind, label, y, colors) {
+  const data = values
+    .filter(value => value.kind === kind)
+    .map(value => ({
+      x: timestampValue(value.timestamp),
+      y,
+      timestamp: value.timestamp,
+      kind: value.kind,
+      severity: value.severity,
+      icon: value.icon,
+      label: value.label,
+      detail: value.detail,
+    }))
+    .filter(value => Number.isFinite(value.x))
+
+  return {
+    type: "scatter",
+    label,
+    data,
+    borderWidth: 2,
+    pointRadius: 5,
+    pointHoverRadius: 7,
+    showLine: false,
+    backgroundColor: data.map(value => markerColor(value, colors)),
+    borderColor: data.map(value => markerColor(value, colors)),
+  }
+}
+
+function markerColor(value, colors) {
+  if (value.kind === "frame") {
+    return colors.info
+  }
+
+  if (value.kind === "event") {
+    return colors.warning
+  }
+
+  return alphaColor(colors.baseContent, 0.7)
+}
+
+function cssColor(style, name, fallback) {
+  return canvasColor(style.getPropertyValue(name).trim(), fallback)
+}
+
+function canvasColor(value, fallback) {
+  const probe = canvasColor.probe || document.createElement("canvas").getContext("2d")
+  canvasColor.probe = probe
+  probe.fillStyle = fallback
+  probe.fillStyle = value || fallback
+  return probe.fillStyle || fallback
+}
+
+function alphaColor(color, alpha) {
+  const rgba = color.match(/^rgba?\(([^)]+)\)$/)
+
+  if (rgba) {
+    const [red, green, blue] = rgba[1].split(/\s*,\s*|\s+/).filter(Boolean)
+    return `rgba(${red}, ${green}, ${blue}, ${alpha})`
+  }
+
+  if (/^#[0-9a-f]{6}$/i.test(color)) {
+    const red = Number.parseInt(color.slice(1, 3), 16)
+    const green = Number.parseInt(color.slice(3, 5), 16)
+    const blue = Number.parseInt(color.slice(5, 7), 16)
+    return `rgba(${red}, ${green}, ${blue}, ${alpha})`
+  }
+
+  return color
+}
+
+function timestampValue(value) {
+  const timestamp = Date.parse(value)
+  return Number.isFinite(timestamp) ? timestamp : undefined
+}
+
+function formatChartTime(value) {
+  return new Intl.DateTimeFormat(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value))
+}
+
+function formatChartDateTime(value) {
+  return new Intl.DateTimeFormat(undefined, {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(new Date(value))
 }
 
 function roundCoordinate(value) {

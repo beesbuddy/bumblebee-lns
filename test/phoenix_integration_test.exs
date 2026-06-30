@@ -73,12 +73,13 @@ defmodule BumblebeeLns.PhoenixIntegrationTest do
 
     {:ok, view, _html} = live(build_conn(), "/")
 
+    assert has_element?(view, "#admin-breadcrumbs [aria-current='page']", "Dashboard")
     assert has_element?(view, "#dashboard-traffic-graph")
-    assert has_element?(view, "#dashboard-router-traffic-svg")
+    assert has_element?(view, "#dashboard-router-traffic-chart")
 
     assert has_element?(
              view,
-             "#dashboard-traffic-graph-navigator[phx-hook='TrafficGraphNavigator']"
+             "#dashboard-traffic-graph-navigator[phx-hook='TrafficGraphNavigator'][data-chart-spec]"
            )
 
     assert has_element?(view, "#dashboard-traffic-window-1h")
@@ -106,7 +107,7 @@ defmodule BumblebeeLns.PhoenixIntegrationTest do
     |> element("#dashboard-traffic-window-24h")
     |> render_click()
 
-    assert has_element?(view, "#dashboard-router-traffic-svg")
+    assert has_element?(view, "#dashboard-router-traffic-chart")
 
     view
     |> element("#dashboard-traffic-zoom-in")
@@ -130,12 +131,15 @@ defmodule BumblebeeLns.PhoenixIntegrationTest do
     |> element("#dashboard-traffic-graph-navigator")
     |> render_hook("zoom_traffic_interval", %{"start" => 0.75, "end" => 1.0, "mode" => "in"})
 
-    assert has_element?(view, "#dashboard-router-traffic-svg")
+    assert has_element?(view, "#dashboard-router-traffic-chart")
   end
 
   test "area list shows configured areas", %{area_name: area_name} do
-    {:ok, _view, html} = live(build_conn(), "/areas")
+    {:ok, view, html} = live(build_conn(), "/areas")
 
+    assert has_element?(view, "#admin-breadcrumbs a[href='/']", "Dashboard")
+    assert has_element?(view, "#admin-breadcrumbs [aria-current='page']", "Areas")
+    refute has_element?(view, "h1", "Areas")
     assert html =~ "Areas"
     assert html =~ area_name
     assert html =~ "EU 863-870MHz"
@@ -150,6 +154,9 @@ defmodule BumblebeeLns.PhoenixIntegrationTest do
 
     {:ok, view, _html} = live(build_conn(), "/areas/new")
 
+    assert has_element?(view, "#admin-breadcrumbs a[href='/areas']", "Areas")
+    assert has_element?(view, "#admin-breadcrumbs [aria-current='page']", "New Area")
+    refute has_element?(view, "h1", "New Area")
     assert has_element?(view, "#resource-form")
 
     view

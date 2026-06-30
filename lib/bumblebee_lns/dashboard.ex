@@ -22,12 +22,6 @@ defmodule BumblebeeLns.Dashboard do
 
   @event_limit 7
   @frame_limit 7
-  @chart_width 960
-  @chart_height 340
-  @chart_padding_left 56
-  @chart_padding_right 24
-  @chart_padding_top 24
-  @chart_padding_bottom 76
   @traffic_windows [
     {"15m", "15m", 15 * 60},
     {"1h", "1h", 60 * 60},
@@ -157,47 +151,14 @@ defmodule BumblebeeLns.Dashboard do
     y_max = chart_y_max(max_value)
     {range_start, range_end} = chart_range(points, observability_items, window)
 
-    plot_width = @chart_width - @chart_padding_left - @chart_padding_right
-    plot_height = @chart_height - @chart_padding_top - @chart_padding_bottom
-
-    positioned_points =
-      Enum.map(points, fn point ->
-        point
-        |> Map.put(:x, chart_x(point.datetime, range_start, range_end, plot_width))
-        |> Map.put(:requests_y, chart_y(point.requests, y_max, plot_height))
-        |> Map.put(:errors_y, chart_y(point.errors, y_max, plot_height))
-      end)
-
-    positioned_items =
-      Enum.map(observability_items, fn item ->
-        item
-        |> Map.put(:x, chart_x(item.started_at, range_start, range_end, plot_width))
-        |> Map.put(:y, marker_y(item))
-        |> Map.put(:class, marker_class(item))
-        |> Map.put(:icon, marker_icon(item))
-      end)
-
     %{
-      has_data?: positioned_points != [] or positioned_items != [],
-      width: @chart_width,
-      height: @chart_height,
+      has_data?: points != [] or observability_items != [],
       window: window,
-      plot: %{
-        x: @chart_padding_left,
-        y: @chart_padding_top,
-        width: plot_width,
-        height: plot_height,
-        bottom: @chart_padding_top + plot_height,
-        right: @chart_padding_left + plot_width
-      },
-      y_ticks: y_ticks(y_max, plot_height),
-      x_ticks: x_ticks(range_start, range_end, plot_width),
-      points: positioned_points,
-      observability_items: positioned_items,
-      requests_path: line_path(positioned_points, :requests_y),
-      errors_path: line_path(positioned_points, :errors_y),
-      latest: List.last(positioned_points),
-      vega_lite_spec: router_traffic_vega_lite_spec(points, observability_items)
+      points: points,
+      observability_items: observability_items,
+      latest: List.last(points),
+      chart_spec:
+        router_traffic_chart_spec(points, observability_items, y_max, range_start, range_end)
     }
   end
 
@@ -509,8 +470,16 @@ defmodule BumblebeeLns.Dashboard do
   defp byte_count(value) when is_binary(value), do: byte_size(value)
   defp byte_count(_), do: 0
 
-  defp chart_y_max(value) when value <= 0, do: 1
-  defp chart_y_max(value), do: max(1, value)
+  defp chart_y_max(value) when value <= 0, do: 4
+
+  defp chart_y_max(value) do
+    value
+    |> Kernel./(4)
+    |> Float.ceil()
+    |> round()
+    |> Kernel.*(4)
+    |> max(4)
+  end
 
   defp chart_range(_points, _items, %{start_at: start_at, end_at: end_at})
        when not is_nil(start_at) and not is_nil(end_at),
@@ -536,52 +505,6 @@ defmodule BumblebeeLns.Dashboard do
           {min_value, max_value}
         end
     end
-  end
-
-  defp chart_x(datetime, range_start, range_end, plot_width) do
-    value = datetime_sort_value(datetime)
-    duration = max(1, range_end - range_start)
-    x = @chart_padding_left + plot_width * (value - range_start) / duration
-    Float.round(x, 2)
-  end
-
-  defp chart_y(value, y_max, plot_height) do
-    y = @chart_padding_top + plot_height - plot_height * value / y_max
-    Float.round(y, 2)
-  end
-
-  defp y_ticks(y_max, plot_height) do
-    0..4
-    |> Enum.map(fn index ->
-      value = y_max * index / 4
-
-      %{
-        value: round_numeric(value),
-        y: chart_y(value, y_max, plot_height)
-      }
-    end)
-  end
-
-  defp x_ticks(range_start, range_end, plot_width) do
-    [range_start, div(range_start + range_end, 2), range_end]
-    |> Enum.uniq()
-    |> Enum.map(fn value ->
-      datetime = :calendar.gregorian_seconds_to_datetime(value)
-
-      %{
-        x: chart_x(datetime, range_start, range_end, plot_width),
-        short_label: format_timeline_time(datetime),
-        label: format_datetime(datetime)
-      }
-    end)
-  end
-
-  defp line_path([], _key), do: ""
-
-  defp line_path(points, y_key) do
-    points
-    |> Enum.map(fn point -> "#{point.x},#{Map.fetch!(point, y_key)}" end)
-    |> Enum.join(" ")
   end
 
   defp round_numeric(value) when is_integer(value), do: value
@@ -610,20 +533,12 @@ defmodule BumblebeeLns.Dashboard do
     |> :calendar.gregorian_seconds_to_datetime()
   end
 
-  defp marker_y(%{kind: :event}), do: @chart_height - 46
-  defp marker_y(%{kind: :frame}), do: @chart_height - 22
-
-  defp marker_class(%{kind: :frame}), do: "fill-info stroke-info"
-  defp marker_class(%{severity: "error"}), do: "fill-error stroke-error"
-  defp marker_class(%{severity: "warning"}), do: "fill-warning stroke-warning"
-  defp marker_class(_), do: "fill-base-content/70 stroke-base-content/70"
-
   defp marker_icon(%{kind: :frame}), do: "Frame"
   defp marker_icon(%{severity: "error"}), do: "Error"
   defp marker_icon(%{severity: "warning"}), do: "Warning"
   defp marker_icon(_), do: "Event"
 
-  defp router_traffic_vega_lite_spec(points, observability_items) do
+  defp router_traffic_chart_spec(points, observability_items, y_max, range_start, range_end) do
     values =
       Enum.flat_map(points, fn point ->
         [
@@ -643,8 +558,13 @@ defmodule BumblebeeLns.Dashboard do
       end)
 
     %{
-      "$schema" => "https://vega.github.io/schema/vega-lite/v5.json",
       "description" => "Router requests and errors per minute",
+      "bounds" => %{
+        "start" =>
+          range_start |> :calendar.gregorian_seconds_to_datetime() |> datetime_to_iso8601(),
+        "end" => range_end |> :calendar.gregorian_seconds_to_datetime() |> datetime_to_iso8601(),
+        "y_max" => y_max
+      },
       "data" => %{"values" => values},
       "observability" => %{
         "values" =>
@@ -654,22 +574,11 @@ defmodule BumblebeeLns.Dashboard do
               timestamp: datetime_to_iso8601(item.started_at),
               kind: value_to_string(item.kind),
               severity: item.severity,
+              icon: marker_icon(item),
               label: item.label,
               detail: item.detail
             }
           end)
-      },
-      "mark" => %{"type" => "line", "point" => true, "interpolate" => "monotone"},
-      "encoding" => %{
-        "x" => %{"field" => "timestamp", "type" => "temporal", "title" => "Timestamp"},
-        "y" => %{"field" => "value", "type" => "quantitative", "title" => "Per minute"},
-        "color" => %{"field" => "metric", "type" => "nominal", "title" => nil},
-        "tooltip" => [
-          %{"field" => "timestamp", "type" => "temporal", "title" => "Timestamp"},
-          %{"field" => "server", "type" => "nominal", "title" => "Server"},
-          %{"field" => "metric", "type" => "nominal", "title" => "Metric"},
-          %{"field" => "value", "type" => "quantitative", "title" => "Value"}
-        ]
       }
     }
   end

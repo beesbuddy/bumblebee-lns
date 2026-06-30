@@ -21,6 +21,8 @@ defmodule BumblebeeLnsWeb.IgnoredNodeLive do
     init_order: %{by: :devaddr, direction: :asc},
     pubsub: [server: BumblebeeLns.PubSub, topic: "ignored_nodes"]
 
+  use BumblebeeLnsWeb.Backpex.ResourceSlots
+
   @impl Backpex.LiveResource
   def singular_name, do: "Ignored Node"
 

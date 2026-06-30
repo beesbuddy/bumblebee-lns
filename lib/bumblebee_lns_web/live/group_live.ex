@@ -19,6 +19,8 @@ defmodule BumblebeeLnsWeb.GroupLive do
     init_order: %{by: :name, direction: :asc},
     pubsub: [server: BumblebeeLns.PubSub, topic: "groups"]
 
+  use BumblebeeLnsWeb.Backpex.ResourceSlots
+
   @impl Backpex.LiveResource
   def singular_name, do: "Group"
 
@@ -52,7 +54,8 @@ defmodule BumblebeeLnsWeb.GroupLive do
         module: BumblebeeLnsWeb.Backpex.Fields.Select,
         label: "Network",
         prompt: "Select network",
-        help_text: "Network this group belongs to. Profiles inherit network behavior through the group.",
+        help_text:
+          "Network this group belongs to. Profiles inherit network behavior through the group.",
         panel: :general,
         searchable: true,
         options: fn _assigns -> Devices.list_network_options() end
@@ -60,7 +63,8 @@ defmodule BumblebeeLnsWeb.GroupLive do
       admins: %{
         module: Backpex.Fields.MultiSelect,
         label: "Administrators",
-        help_text: "Users allowed to administer this group. Leave empty for no group-specific admins.",
+        help_text:
+          "Users allowed to administer this group. Leave empty for no group-specific admins.",
         panel: :access,
         options: fn _assigns -> Devices.list_administrator_options() end,
         orderable: false
@@ -76,7 +80,8 @@ defmodule BumblebeeLnsWeb.GroupLive do
         module: Backpex.Fields.Text,
         label: "Slack channel",
         placeholder: "#lorawan-alerts",
-        help_text: "Optional Slack channel for group alerts. Use a channel name such as #lorawan-alerts.",
+        help_text:
+          "Optional Slack channel for group alerts. Use a channel name such as #lorawan-alerts.",
         panel: :notifications,
         searchable: true
       }

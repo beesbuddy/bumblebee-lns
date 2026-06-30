@@ -20,6 +20,8 @@ defmodule BumblebeeLnsWeb.AreaLive do
     init_order: %{by: :name, direction: :asc},
     pubsub: [server: BumblebeeLns.PubSub, topic: "areas"]
 
+  use BumblebeeLnsWeb.Backpex.ResourceSlots
+
   @impl Backpex.LiveResource
   def singular_name, do: "Area"
 

@@ -21,6 +21,8 @@ defmodule BumblebeeLnsWeb.DeviceLive do
     init_order: %{by: :deveui, direction: :asc},
     pubsub: [server: BumblebeeLns.PubSub, topic: "devices"]
 
+  use BumblebeeLnsWeb.Backpex.ResourceSlots
+
   @impl Backpex.LiveResource
   def singular_name, do: "Commissioned Device"
 

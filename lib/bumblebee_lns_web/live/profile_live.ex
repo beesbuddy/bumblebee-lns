@@ -21,6 +21,8 @@ defmodule BumblebeeLnsWeb.ProfileLive do
     init_order: %{by: :name, direction: :asc},
     pubsub: [server: BumblebeeLns.PubSub, topic: "profiles"]
 
+  use BumblebeeLnsWeb.Backpex.ResourceSlots
+
   @impl Backpex.LiveResource
   def singular_name, do: "Profile"
 

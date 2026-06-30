@@ -20,6 +20,8 @@ defmodule BumblebeeLnsWeb.GatewayLive do
     init_order: %{by: :mac, direction: :asc},
     pubsub: [server: BumblebeeLns.PubSub, topic: "gateways"]
 
+  use BumblebeeLnsWeb.Backpex.ResourceSlots
+
   @impl Backpex.LiveResource
   def singular_name, do: "Gateway"
 
