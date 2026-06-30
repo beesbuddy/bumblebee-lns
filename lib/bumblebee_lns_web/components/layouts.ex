@@ -136,10 +136,10 @@ defmodule BumblebeeLnsWeb.Layouts do
         <Backpex.HTML.CoreComponents.icon
           :if={not breadcrumb.first?}
           name="hero-chevron-right"
-          class="text-base-content/35 size-4 shrink-0"
+          class="text-base-content/35 size-4 shrink-0 self-center"
         />
-        <div>
-          <h1 class="text-base-content mb-2 text-xl font-semibold leading-relaxed">
+        <div class="flex min-w-0 items-center">
+          <span class="text-base-content min-w-0 text-xl font-semibold leading-relaxed">
             <.link
               :if={not breadcrumb.current?}
               navigate={breadcrumb.path}
@@ -154,7 +154,7 @@ defmodule BumblebeeLnsWeb.Layouts do
             >
               {breadcrumb.label}
             </span>
-          </h1>
+          </span>
         </div>
       <% end %>
     </nav>
