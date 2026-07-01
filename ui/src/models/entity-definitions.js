@@ -41,6 +41,7 @@ const COMMON_FIELD_LABEL_KEYS = {
   mask: 'field.mask',
   format: 'field.format',
   parse_uplink: 'field.parse_uplink',
+  transform_uplink: 'field.transform_uplink',
   build: 'field.build',
   event_fields: 'field.event_fields',
   uri: 'field.uri',
@@ -238,7 +239,7 @@ const definitions = {
     canCreate: true,
     canEdit: true,
     canDelete: true,
-    listFields: ['app', 'format', 'parse_uplink', 'build', 'event_fields'],
+    listFields: ['app', 'format', 'parse_uplink', 'transform_uplink', 'build', 'event_fields'],
     perPage: DEFAULT_PER_PAGE
   },
   connectors: {

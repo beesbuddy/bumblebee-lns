@@ -10,7 +10,7 @@
 -export([init/1, handle_join/3, handle_uplink/4, handle_rxq/5, handle_delivery/3]).
 -export([handle_downlink/2]).
 % for internal
--export([send_class_c/4]).
+-export([send_class_c/4, transform_uplink/4]).
 
 -include("bumblebee.hrl").
 -include("bumblebee_db.hrl").
@@ -52,7 +52,7 @@ handle_uplink(
     end.
 
 handle_uplink0(
-    #handler{app = AppID, parse_uplink = Parse, uplink_fields = Fields} = Handler,
+    #handler{app = AppID, uplink_fields = Fields} = Handler,
     {Network, Profile, Node},
     #frame{data = Data} = Frame
 ) ->
@@ -79,7 +79,7 @@ handle_uplink0(
             bumblebee_backend_factory:uplink(
                 AppID,
                 {Profile, Node},
-                data_to_fields(AppID, Parse, Vars, Data)
+                data_to_fields(Handler, Vars, Data)
             ),
             {ok, undefined}
     end.
@@ -98,13 +98,13 @@ handle_rxq(
     Gateways,
     _WillReply,
     #frame{port = Port, data = Data},
-    {#handler{parse_uplink = Parse, uplink_fields = Fields}, Vars}
+    {#handler{uplink_fields = Fields} = Handler, Vars}
 ) ->
     Vars2 = parse_rxq(Gateways, Fields, Vars),
     bumblebee_backend_factory:uplink(
         AppID,
         {Profile, Node},
-        data_to_fields(AppID, Parse, Vars2, Data)
+        data_to_fields(Handler, Vars2, Data)
     ),
     bumblebee_application:send_stored_frames(DevAddr, Port).
 
@@ -284,6 +284,19 @@ get_dbfield(DBase, Key, Field) ->
             undefined
     end.
 
+data_to_fields(#handler{app = AppId, parse_uplink = {_, Fun}} = Handler, Vars, Data) when
+    is_function(Fun)
+->
+    try
+        transform_uplink(Handler, Fun(Vars, Data), Data, #{})
+    catch
+        Error:Term ->
+            bumblebee_utils:throw_error({handler, AppId}, {parse_failed, {Error, Term}}),
+            transform_uplink(Handler, Vars, Data, #{})
+    end;
+data_to_fields(#handler{} = Handler, Vars, Data) ->
+    transform_uplink(Handler, Vars, Data, #{}).
+
 data_to_fields(AppId, {_, Fun}, Vars, Data) when is_function(Fun) ->
     try
         Fun(Vars, Data)
@@ -294,6 +307,23 @@ data_to_fields(AppId, {_, Fun}, Vars, Data) when is_function(Fun) ->
     end;
 data_to_fields(_AppId, _Else, Vars, _) ->
     Vars.
+
+transform_uplink(#handler{transform_uplink = Transform}, Vars, _Data, _Context) when
+    Transform == undefined; Transform == <<>>; Transform == null
+->
+    Vars;
+transform_uplink(#handler{app = AppId, transform_uplink = Transform}, Vars, Data, Context0) ->
+    Context = Context0#{app => AppId, data => Data},
+    case bumblebee_transformer:transform(Transform, Vars, #{context => Context}) of
+        {ok, Transformed} when is_map(Transformed) ->
+            Transformed;
+        {ok, Other} ->
+            lager:warning("Handler ~p transform failed: ~p", [AppId, {bad_return, Other}]),
+            Vars;
+        {error, Reason} ->
+            lager:warning("Handler ~p transform failed: ~p", [AppId, Reason]),
+            Vars
+    end.
 
 handle_delivery({_Network, #profile{app = AppID} = Profile, Node}, Result, Receipt) ->
     case mnesia:dirty_read(handler, AppID) of

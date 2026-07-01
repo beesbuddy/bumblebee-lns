@@ -84,7 +84,9 @@ defmodule BumblebeeLns.MixProject do
       {:erlmongo,
        git: "https://github.com/SergejJurecko/erlmongo.git",
        ref: "f0d03cd4592f7bf28059b81214b61c28ccf046c0"},
-      {:prometheus_cowboy, "~> 0.2.0"}
+      {:prometheus_cowboy, "~> 0.2.0"},
+      {:quickjs,
+       git: "https://github.com/benoitc/erlang-quickjs.git", tag: "0.1.0", submodules: true}
     ]
   end
 

@@ -233,6 +233,7 @@
     uplink_fields :: [binary()],
     payload :: 'undefined' | binary(),
     parse_uplink :: 'undefined' | {binary(), fun()},
+    transform_uplink :: 'undefined' | binary(),
     event_fields :: [binary()],
     parse_event :: 'undefined' | {binary, fun()},
     build :: 'undefined' | {binary(), fun()},

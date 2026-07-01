@@ -295,6 +295,8 @@ get_value(handler, uplink_fields, PropList) ->
     get_value0(fields, uplink_fields, PropList);
 get_value(handler, parse_uplink, PropList) ->
     get_value0(parse, parse_uplink, PropList);
+get_value(handler, transform_uplink, PropList) ->
+    proplists:get_value(transform_uplink, PropList, undefined);
 %temporary until RELEASE 0.6
 get_value(site, area, PropList) ->
     get_value0(group, area, PropList);

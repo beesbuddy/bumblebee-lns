@@ -322,6 +322,8 @@ parse_field(Key, Value) when Key == average_qs ->
     parse_qs(Value);
 parse_field(Key, Value) when Key == parse_uplink; Key == parse_event; Key == build ->
     parse_fun(Value);
+parse_field(Key, Value) when Key == transform_uplink andalso (Value == null orelse Value == <<>>) ->
+    undefined;
 parse_field(Key, #{ip := IP, port := Port, ver := Ver}) when Key == ip_address ->
     {ok, IP2} = inet_parse:address(binary_to_list(IP)),
     {IP2, Port, Ver};

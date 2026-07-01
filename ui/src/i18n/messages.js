@@ -77,6 +77,7 @@ export const MESSAGES = {
     'field.mask': 'Mask',
     'field.format': 'Format',
     'field.parse_uplink': 'Parse Uplink',
+    'field.transform_uplink': 'Transform Uplink',
     'field.build': 'Build',
     'field.event_fields': 'Event Fields',
     'field.uri': 'URI',

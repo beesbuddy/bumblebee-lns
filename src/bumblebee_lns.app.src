@@ -48,6 +48,6 @@
     ]},
     {applications, [kernel, stdlib, sasl, os_mon, lager, mnesia, eid, cbor,
         cowboy, gun, jsx, iso8601, gen_smtp, amqp_client, emqtt, erlmongo,
-        prometheus_cowboy]}]}.
+        prometheus_cowboy, quickjs]}]}.
 
 % end of file
