@@ -115,7 +115,7 @@ defmodule BumblebeeLnsWeb.Layouts do
             Operations
           </:label>
 
-          <Backpex.HTML.Layout.sidebar_item current_url={@current_url} href="#">
+          <Backpex.HTML.Layout.sidebar_item current_url={@current_url} navigate={~p"/connectors"}>
             <Backpex.HTML.CoreComponents.icon name="hero-arrow-path-rounded-square" class="size-5" />
             Connectors
           </Backpex.HTML.Layout.sidebar_item>

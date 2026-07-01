@@ -26,6 +26,7 @@ defmodule BumblebeeLnsWeb.Router do
       live_resources("/devices", DeviceLive, only: [:index, :new, :edit])
       live_resources("/nodes", NodeLive, only: [:index, :new, :edit])
       live_resources("/ignored_nodes", IgnoredNodeLive, only: [:index, :new, :edit])
+      live_resources("/connectors", ConnectorLive, only: [:index, :new, :edit])
     end
 
     backpex_routes()

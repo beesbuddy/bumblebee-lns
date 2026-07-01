@@ -167,6 +167,29 @@ defmodule BumblebeeLns.PhoenixIntegrationTest do
     assert html =~ "user@example.com"
   end
 
+  test "connector list shows backend connectors from the migrated admin section" do
+    connector_id = "liveview-connector-#{System.unique_integer([:positive])}"
+
+    :ok =
+      :mnesia.dirty_write(
+        {:connector, connector_id, "test-app", "json", "mqtt://localhost", 1, "uplinks/{devaddr}",
+         "events/{devaddr}", 0, "downlinks/{devaddr}", :undefined, true, [], "client-1", "basic",
+         "user", "secret", :undefined, :undefined, [], 0, 0, :undefined}
+      )
+
+    on_exit(fn ->
+      :mnesia.dirty_delete(:connector, connector_id)
+    end)
+
+    {:ok, view, html} = live(build_conn(), "/connectors")
+
+    assert has_element?(view, "#admin-breadcrumbs a[href='/']", "Dashboard")
+    assert has_element?(view, "#admin-breadcrumbs [aria-current='page']", "Connectors")
+    refute has_element?(view, "h1", "Connectors")
+    assert html =~ connector_id
+    assert html =~ "mqtt://localhost"
+  end
+
   test "user new page persists a user with digest password hash" do
     user_name = "created-user-#{System.unique_integer([:positive])}"
     user_key = :erlang.iolist_to_binary(user_name)
