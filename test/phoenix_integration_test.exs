@@ -145,6 +145,64 @@ defmodule BumblebeeLns.PhoenixIntegrationTest do
     assert html =~ "EU 863-870MHz"
   end
 
+  test "user list shows server users from the migrated admin section" do
+    user_name = "liveview-user-#{System.unique_integer([:positive])}"
+    user_key = :erlang.iolist_to_binary(user_name)
+
+    :ok =
+      :mnesia.dirty_write(
+        {:user, user_key, "existing-ha1", [<<"unlimited">>], "user@example.com", true}
+      )
+
+    on_exit(fn ->
+      :mnesia.dirty_delete(:user, user_key)
+    end)
+
+    {:ok, view, html} = live(build_conn(), "/users")
+
+    assert has_element?(view, "#admin-breadcrumbs a[href='/']", "Dashboard")
+    assert has_element?(view, "#admin-breadcrumbs [aria-current='page']", "Users")
+    refute has_element?(view, "h1", "Users")
+    assert html =~ user_name
+    assert html =~ "user@example.com"
+  end
+
+  test "user new page persists a user with digest password hash" do
+    user_name = "created-user-#{System.unique_integer([:positive])}"
+    user_key = :erlang.iolist_to_binary(user_name)
+
+    on_exit(fn ->
+      :mnesia.dirty_delete(:user, user_key)
+    end)
+
+    {:ok, view, _html} = live(build_conn(), "/users/new")
+
+    assert has_element?(view, "#admin-breadcrumbs a[href='/users']", "Users")
+    assert has_element?(view, "#admin-breadcrumbs [aria-current='page']", "New User")
+    assert has_element?(view, "#resource-form")
+
+    view
+    |> form("#resource-form", %{
+      "change" => %{
+        "name" => user_name,
+        "pass" => "secret",
+        "scopes" => ["unlimited"],
+        "email" => "created@example.com",
+        "send_alerts" => "true"
+      }
+    })
+    |> render_submit(%{"save-type" => "save"})
+
+    assert_redirect(view, "/users")
+
+    expected_ha1 =
+      :bumblebee_http_digest.ha1({user_key, <<"bumblebee_lns">>, <<"secret">>})
+
+    assert [
+             {:user, ^user_key, ^expected_ha1, [<<"unlimited">>], "created@example.com", true}
+           ] = :mnesia.dirty_read(:user, user_key)
+  end
+
   test "area new page persists a new area" do
     new_area_name = "created-area-#{System.unique_integer([:positive])}"
 

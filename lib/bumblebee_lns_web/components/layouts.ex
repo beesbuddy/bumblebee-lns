@@ -50,6 +50,16 @@ defmodule BumblebeeLnsWeb.Layouts do
           <Backpex.HTML.CoreComponents.icon name="hero-home" class="size-5" /> Dashboard
         </Backpex.HTML.Layout.sidebar_item>
 
+        <Backpex.HTML.Layout.sidebar_section id="server">
+          <:label>
+            <Backpex.HTML.CoreComponents.icon name="hero-server-stack" class="size-5" /> Server
+          </:label>
+
+          <Backpex.HTML.Layout.sidebar_item current_url={@current_url} navigate={~p"/users"}>
+            <Backpex.HTML.CoreComponents.icon name="hero-user" class="size-5" /> Users
+          </Backpex.HTML.Layout.sidebar_item>
+        </Backpex.HTML.Layout.sidebar_section>
+
         <Backpex.HTML.Layout.sidebar_section id="network">
           <:label>
             <Backpex.HTML.CoreComponents.icon name="hero-signal" class="size-5" /> Network
@@ -260,7 +270,8 @@ defmodule BumblebeeLnsWeb.Layouts do
       "/ignored_nodes" => "Ignored Nodes",
       "/networks" => "Networks",
       "/nodes" => "Activated Nodes",
-      "/profiles" => "Profiles"
+      "/profiles" => "Profiles",
+      "/users" => "Users"
     }
   end
 end

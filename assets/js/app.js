@@ -696,6 +696,25 @@ function dispatchInput(input) {
   input.dispatchEvent(new Event("change", {bubbles: true}))
 }
 
+const backpexFormTabState = new Map()
+
+function backpexFormTabStateKey(form) {
+  return [window.location.pathname, form.id, form.getAttribute("action") || ""].join(":")
+}
+
+function backpexInitialFormTabIndex(form, fieldsets, stateKey) {
+  const storedIndex = Number.parseInt(
+    form.dataset.backpexActiveTab || backpexFormTabState.get(stateKey) || "0",
+    10
+  )
+
+  if (Number.isInteger(storedIndex) && storedIndex >= 0 && storedIndex < fieldsets.length) {
+    return storedIndex
+  }
+
+  return 0
+}
+
 function enhanceBackpexFormTabs(root = document) {
   const forms = Array.from(root.querySelectorAll ? root.querySelectorAll("#resource-form") : [])
 
@@ -718,12 +737,17 @@ function enhanceBackpexFormTabs(root = document) {
       continue
     }
 
+    const stateKey = backpexFormTabStateKey(form)
+
     const tabs = document.createElement("div")
     tabs.className = "backpex-form-tabs"
     tabs.setAttribute("role", "tablist")
     tabs.setAttribute("aria-label", "Form sections")
 
     const activate = activeIndex => {
+      form.dataset.backpexActiveTab = String(activeIndex)
+      backpexFormTabState.set(stateKey, String(activeIndex))
+
       fieldsets.forEach((fieldset, index) => {
         const active = index === activeIndex
         fieldset.hidden = !active
@@ -757,7 +781,7 @@ function enhanceBackpexFormTabs(root = document) {
 
     panelContainer.prepend(tabs)
     form.dataset.backpexTabsEnhanced = "true"
-    activate(0)
+    activate(backpexInitialFormTabIndex(form, fieldsets, stateKey))
   }
 }
 
